@@ -1,0 +1,143 @@
+GET /templates
+
+Get a list of the available database dumps/templates
+
+Returns 200 and JSON in the body
+[
+    <id>: String, unique identifier for the dump
+    <id>,
+    ...
+]
+
+------------------------------------------------------
+
+GET /templates/<id>
+
+Get info about a particular template
+
+Returns 200 and JSON in the body
+{
+    id: String
+    note: String - human readable info about this template
+}
+
+Returns 404 if there's no template with that ID
+
+------------------------------------------------------
+
+PUT /templates/<id>
+
+Upload a new template as a file upload.  The template data should
+be a gzipped dump from another database as created with this command line:
+pg_dump -h <hostname> -p <port> -U <user> <database> | gzip -c > dump-file.gz
+
+Returns 201 if successful.
+Returns 403 if there is already a template with that id.
+
+-------------------------------------------------------
+
+PUT /templates/<id>?based_on=<database-id>
+
+Dump the named database as a new template.
+
+Returns 201 if successful.
+Returns 403 if there is already a template with that id.
+
+--------------------------------------------------------
+
+DELETE /templates/<id>
+
+Delete a template.
+
+Returns 204 if successful.
+Returns 404 if there is no template with that id.
+
+-------------------------------------------------------
+
+GET /databases
+
+Get a list of all available databases.
+
+Returns 200 and JSON in the body
+[   <id> : String, identifer for the database
+    <id>,
+    ...
+]
+
+------------------------------------------------
+
+GET /databases/<id>
+
+Get info about a particular database
+
+Returns 200 and JSON in the body
+{
+    id: String - identifier for this database
+    host: String - hostname for the DB
+    port: Integer - port for the DB
+    user: String - username for the DB
+    password: String - passwd for the DB
+    expires: Integer - Unix time when this database will be automatically deleted
+}
+
+-------------------------------------------------
+
+POST /databases
+
+Create a brand new, empty database.  The system will assign a random database name.
+
+Returns 201 and JSON in the body
+{
+    id: String - identifier for this database
+    host: String - hostname for the DB
+    port: Integer - port for the DB
+    user: String - username for the DB
+    password: String - passwd for the DB
+    expires: Integer - Unix time when this database will be automatically deleted
+}
+
+-----------------------------------------------------
+
+POST /databases?based_on=<template-id>
+
+Create a new database and populate it with the given database template
+
+Returns 201 and JSON in the body
+{
+    id: String - identifier for this database
+    host: String - hostname for the DB
+    port: Integer - port for the DB
+    user: String - username for the DB
+    password: String - passwd for the DB
+    expires: Integer - Unix time when this database will be automatically deleted
+}
+
+Returns 404 if there is no template with that id
+
+---------------------------------------------------------
+
+PATCH /databases/<id>?expires=<number>
+
+Change the expiration time for the given database
+
+Returns 200 and JSON in the body {
+    id: String - identifier for this database
+    host: String - hostname for the DB
+    port: Integer - port for the DB
+    user: String - username for the DB
+    password: String - passwd for the DB
+    expires: Integer - Unix time when this database will be automatically deleted
+}
+
+Returns 404 if there is no template with that id
+
+----------------------------------------------------------
+
+DELETE /databases/<id>
+
+Delete a database
+
+Returns 204 if successful.
+Returns 404 if there is no database with that id.
+
+----------------------------------------------------------

@@ -87,6 +87,19 @@ sub save_template {
     );
 }
 
+sub save_database {
+    my $self = shift;
+    my %params = @_;
+
+    _verify_required_params(\%params, [qw(host port user password source_template_id)]);
+
+    return $self->_save_entity(
+        'save_database',
+        q(INSERT INTO live_database (host, port, user, password, source_template_id, create_time, expire_time) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))),
+        @params{qw(host port user password source_template_id)},
+    );
+}
+
 sub _verify_required_params {
     my $param_hash = shift;
     my $required_list = shift;
@@ -112,6 +125,47 @@ sub _save_entity {
     $sth->finish;
     return $id;
 }
+
+sub get_template {
+    my $self = shift;
+    my $template_id = shift;
+
+    return $self->_get_one_entity(
+        'get_template',
+        q(SELECT template_id, note, file_path create_time, last_used_time FROM db_template where template_id = ?),
+        $template_id,
+    );
+}
+
+sub get_database {
+    my $self = shift;
+    my $db_id = shift;
+
+    return $self->_get_one_entity(
+        'get_database',
+        q(SELECT database_id, host, port, user, password, create_time, expire_time, source_template_id FROM live_database WHERE database_id = ?),
+        $db_id,
+    );
+}
+
+sub _get_one_entity {
+    my($self, $label, $sql, $id) = @_;
+
+    defined($id) || $self->_error("Getting one $label requires an ID argument");
+
+    my $dbh = $self->dbh;
+    my $sth = $dbh->prepare_cached($sql)
+            || Exception::DB::Select::Prepare->throw(error => $dbh->errstr, sql => $sql);
+    $sth->execute($id)
+            || Exception::DB::Select::Execute->throw(error => $dbh->errstr, sql => $sql);
+
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+    return $row;
+}
+
+
+
 
 
 sub _db_file_pathname {

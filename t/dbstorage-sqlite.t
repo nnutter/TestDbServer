@@ -9,7 +9,7 @@ use FakeApp;
 use strict;
 use warnings;
 
-plan tests => 3;
+plan tests => 5;
 
 # initialize
 my($storage, $temp_db_file);
@@ -82,6 +82,26 @@ subtest save_database => sub {
     throws_ok { $storage->save_database( source_template_id => 'garbage',  host => 'h', port => 1, user => 'u', password => 'p') }
         'Exception::DB::Insert',
         'Cannot insert database that is not linked to a template';
+};
+
+subtest get_template => sub {
+    plan tests => scalar(@templates) * 2;
+
+    foreach my $template_id ( @templates ) {
+        my $tmpl = $storage->get_template($template_id);
+        ok($tmpl, "Get template $template_id");
+        is($tmpl->{template_id}, $template_id, 'template_id is correct');
+    }
+};
+
+subtest get_database => sub {
+    plan tests => scalar(@databases) * 2;
+
+    foreach my $database_id ( @databases ) {
+        my $db = $storage->get_database($database_id);
+        ok($db, "Get template $database_id");
+        is($db->{database_id}, $database_id, 'database_id is correct');
+    }
 };
 
 

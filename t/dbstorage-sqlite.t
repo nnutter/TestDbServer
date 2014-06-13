@@ -56,7 +56,7 @@ subtest save_template => sub {
 
 my @databases;
 subtest save_database => sub {
-    plan tests => 8;
+    plan tests => 9;
 
     my @database_info = (
         { host => 'localhost', port => 123, user => 'joe', password => 'secret', source_template_id => $templates[0] },
@@ -78,6 +78,10 @@ subtest save_database => sub {
             'Exception::RequiredParamMissing',
             "save_database() requires $missing";
     }
+
+    throws_ok { $storage->save_database( source_template_id => 'garbage',  host => 'h', port => 1, user => 'u', password => 'p') }
+        'Exception::DB::Insert',
+        'Cannot insert database that is not linked to a template';
 };
 
 

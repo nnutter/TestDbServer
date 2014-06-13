@@ -78,15 +78,23 @@ sub save_template {
     my $self = shift;
     my %params = @_;
 
-    unless (exists $params{file_path}) {
-        Exception::RequiredParamMissing->throw( param => ['file_path'] );
-    }
+    _verify_required_params(\%params, [qw( file_path )]);
 
     return $self->_save_entity(
             'save_template',
             q(INSERT INTO db_template (note, file_path, create_time, last_used_time) VALUES (?, ?, datetime('now'), datetime('now'))),
             @params{'note','file_path'},
     );
+}
+
+sub _verify_required_params {
+    my $param_hash = shift;
+    my $required_list = shift;
+
+    if (my @missing = grep { ! exists $param_hash->{$_} } @$required_list) {
+        Exception::RequiredParamMissing->throw(error => 'Required parameter missing', param => \@missing );
+    }
+    return 1;
 }
 
 sub _save_entity {

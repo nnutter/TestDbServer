@@ -1,3 +1,4 @@
+use TestDbServer::Exceptions;
 use TestDbServer::DbStorage::Exceptions;
 use DBI;
 
@@ -71,6 +72,37 @@ sub _init_db {
                 );
 
     return $dbh;
+}
+
+sub save_template {
+    my $self = shift;
+    my %params = @_;
+
+    unless (exists $params{file_path}) {
+        Exception::RequiredParamMissing->throw( param => ['file_path'] );
+    }
+
+    return $self->_save_entity(
+            'save_template',
+            q(INSERT INTO db_template (note, file_path, create_time, last_used_time) VALUES (?, ?, datetime('now'), datetime('now'))),
+            @params{'note','file_path'},
+    );
+}
+
+sub _save_entity {
+    my $self = shift;
+    my $label = shift;
+    my $sql = shift;
+
+    my $dbh = $self->dbh;
+    my $sth = $dbh->prepare_cached($sql)
+            || Exception::DB::Insert::Prepare->throw(error => $dbh->errstr, sql => $sql);
+    $sth->execute(@_)
+            || Exception::DB::Insert::Execute->throw(error => $dbh->errstr, sql => $sql);
+
+    my $id = $dbh->last_insert_id(undef, undef, undef, undef);
+    $sth->finish;
+    return $id;
 }
 
 

@@ -34,21 +34,25 @@ subtest initialize => sub {
 
 my @templates;
 subtest save_template => sub {
-    plan tests => 4;
+    plan tests => 5;
 
-    my $template_1 = $storage->save_template(file_path => '/tmp/file1', note => 'hi there');
+    my $template_1 = $storage->save_template(template_id => 1, file_path => '/tmp/file1', note => 'hi there');
     ok($template_1,'Save template with a note');
     push @templates, $template_1;
 
-    my $template_2 = $storage->save_template(file_path => '/tmp/file2');
+    my $template_2 = $storage->save_template(template_id => 2, file_path => '/tmp/file2');
     ok($template_2, 'Save template without a note');
     push @templates, $template_2;
+
+    throws_ok { $storage->save_template(template_id => 1, file_path => 'garbage', note => 'garbage') }
+        'Exception::DB::Insert',
+        'Cannot save_template() with duplicate template_id';
 
     throws_ok { $storage->save_template(note => 'denied') }
         'Exception::RequiredParamMissing',
         'save_template() requires file_path param';
 
-    throws_ok { $storage->save_template(file_path => '/tmp/file1') }
+    throws_ok { $storage->save_template(template_id => 999, file_path => '/tmp/file1') }
         'Exception::DB::Insert',
         'Cannot save_template() with duplicate file_path';
 };

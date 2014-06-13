@@ -78,12 +78,12 @@ sub save_template {
     my $self = shift;
     my %params = @_;
 
-    _verify_required_params(\%params, [qw( file_path )]);
+    _verify_required_params(\%params, [qw( template_id file_path )]);
 
     return $self->_save_entity(
             'save_template',
-            q(INSERT INTO db_template (note, file_path, create_time, last_used_time) VALUES (?, ?, datetime('now'), datetime('now'))),
-            @params{'note','file_path'},
+            q(INSERT INTO db_template (template_id, note, file_path, create_time, last_used_time) VALUES (?, ?, ?, datetime('now'), datetime('now'))),
+            @params{'template_id', 'note','file_path'},
     );
 }
 

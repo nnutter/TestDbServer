@@ -9,7 +9,7 @@ use FakeApp;
 use strict;
 use warnings;
 
-plan tests => 7;
+plan tests => 8;
 
 # initialize
 my($storage, $temp_db_file);
@@ -116,6 +116,18 @@ subtest get_all_databases => sub {
 
     my $got_databases = $storage->get_databases();
     _assert_all_matching($got_databases, \@databases, 'database');
+};
+
+subtest count => sub {
+    plan tests => 2;
+
+    my $count;
+
+    $count = $storage->count_templates();
+    is($count, scalar(@templates), 'count templates');
+
+    $count = $storage->count_databases();
+    is($count, scalar(@databases), 'count databases');
 };
 
 sub _assert_all_matching {

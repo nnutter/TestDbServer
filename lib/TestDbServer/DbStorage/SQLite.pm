@@ -202,10 +202,34 @@ sub _get_multiple_entities {
     return \@rows;
 }
 
+sub count_templates {
+    my $self = shift;
+
+    return $self->_count_entities('db_template');
+}
+
+sub count_databases {
+    my $self = shift;
+
+    return $self->_count_entities('live_database');
+}
 
 
+sub _count_entities {
+    my $self = shift;
+    my $table_name = shift;
 
+    my $dbh = $self->dbh;
 
+    my $sql = qq(SELECT count(*) from $table_name);
+    my $sth = $dbh->prepare_cached($sql)
+        || Exception::DB::Select::Prepare->throw(error => $dbh->errstr, sql => $sql);
+    $sth->execute()
+        || Exception::DB::Select::Execute->throw(error => $dbh->errstr, sql => $sql);
+
+    my @row = $sth->fetchrow_array;
+    return $row[0];
+}
 
 sub _db_file_pathname {
     my $self = shift;

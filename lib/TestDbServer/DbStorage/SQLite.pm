@@ -164,6 +164,45 @@ sub _get_one_entity {
     return $row;
 }
 
+sub get_templates {
+    my $self = shift;
+
+    return $self->_get_multiple_entities(
+        'get_templates',
+        q(SELECT template_id, note, file_path create_time, last_used_time FROM db_template),
+    );
+}
+
+sub get_databases {
+    my $self = shift;
+
+    return $self->_get_multiple_entities(
+        'get_databases',
+        q(SELECT database_id, host, port, user, password, create_time, expire_time, source_template_id FROM live_database),
+    );
+}
+
+sub _get_multiple_entities {
+    my $self = shift;
+    my $label = shift;
+    my $sql = shift;
+
+    my $dbh = $self->dbh;
+    my $sth = $dbh->prepare_cached($sql)
+            || Exception::DB::Select::Prepare->throw(error => $dbh->errstr, sql => $sql);
+    $sth->execute(@_)
+            || Exception::DB::Select::Execute->throw(error => $dbh->errstr, sql => $sql);
+
+    my @rows;
+    while( my $row = $sth->fetchrow_hashref ) {
+        push @rows, $row;
+    }
+    $sth->finish;
+
+    return \@rows;
+}
+
+
 
 
 

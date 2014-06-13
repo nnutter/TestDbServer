@@ -9,7 +9,7 @@ use FakeApp;
 use strict;
 use warnings;
 
-plan tests => 5;
+plan tests => 7;
 
 # initialize
 my($storage, $temp_db_file);
@@ -104,6 +104,35 @@ subtest get_database => sub {
     }
 };
 
+subtest all_get_templates => sub {
+    plan tests => 2;
+
+    my $got_templates = $storage->get_templates();
+    _assert_all_matching($got_templates, \@templates, 'template');
+};
+
+subtest get_all_databases => sub {
+    plan tests => 2;
+
+    my $got_databases = $storage->get_databases();
+    _assert_all_matching($got_databases, \@databases, 'database');
+};
+
+sub _assert_all_matching {
+    my($got_list, $expected_list, $label) = @_;
+
+    is(scalar(@$got_list), scalar(@$expected_list), "Get all ${label}s");
+
+    my %got = map { $_->{"${label}_id"} => 1 } @$got_list;
+
+    foreach my $id ( @$expected_list ) {
+        unless (delete $got{$id}) {
+            ok(0, "${label}_id $id in result set");
+        }
+    }
+
+    is(scalar( keys %got ), 0, "Found all expected ${label}s");
+}
 
 # get template
 

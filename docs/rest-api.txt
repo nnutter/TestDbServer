@@ -18,6 +18,7 @@ Get info about a particular template
 Returns 200 and JSON in the body
 {
     id: String
+    name: String - Short, human readable name
     note: String - human readable info about this template
 }
 

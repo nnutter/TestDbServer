@@ -34,27 +34,28 @@ subtest initialize => sub {
 
 my @templates;
 subtest save_template => sub {
-    plan tests => 5;
+    plan tests => 6;
 
-    my $template_1 = $storage->save_template(template_id => 1, file_path => '/tmp/file1', note => 'hi there');
+    my $template_1 = $storage->save_template(name => 'template 1', file_path => '/tmp/file1', note => 'hi there');
     ok($template_1,'Save template with a note');
     push @templates, $template_1;
 
-    my $template_2 = $storage->save_template(template_id => 2, file_path => '/tmp/file2');
+    my $template_2 = $storage->save_template(name => 'template_2', file_path => '/tmp/file2');
     ok($template_2, 'Save template without a note');
     push @templates, $template_2;
 
-    throws_ok { $storage->save_template(template_id => 1, file_path => 'garbage', note => 'garbage') }
+    throws_ok { $storage->save_template(name => 'template 1', file_path => 'garbage', note => 'garbage') }
         'Exception::DB::Insert',
-        'Cannot save_template() with duplicate template_id';
+        'Cannot save_template() with duplicate name';
 
-    throws_ok { $storage->save_template(note => 'denied') }
-        'Exception::RequiredParamMissing',
-        'save_template() requires file_path param';
-
-    throws_ok { $storage->save_template(template_id => 999, file_path => '/tmp/file1') }
+    throws_ok { $storage->save_template(name => 'duplicate', file_path => '/tmp/file1') }
         'Exception::DB::Insert',
         'Cannot save_template() with duplicate file_path';
+
+    check_required_attributes_for_save(
+        sub { $storage->save_template(@_) },
+        { name => 'template name', file_path => '/path/to/file' },
+    );
 };
 
 
@@ -74,19 +75,28 @@ subtest save_database => sub {
         ok($db, "Save database $i");
     }
 
-    my %params_for_missing = ( host => 'localhost', port => 123, user => 'joe', password => 'secret', source_template_id => $templates[0] );
-    foreach my $missing ( keys %params_for_missing ) {
-        my %params = %params_for_missing;
-        delete $params{$missing};
-        throws_ok { $storage->save_database(%params) }
-            'Exception::RequiredParamMissing',
-            "save_database() requires $missing";
-    }
+    check_required_attributes_for_save(
+        sub { $storage->save_database(@_) },
+        { host => 'localhost', port => 123, user => 'joe', password => 'secret', source_template_id => $templates[0] }
+    );
 
     throws_ok { $storage->save_database( source_template_id => 'garbage',  host => 'h', port => 1, user => 'u', password => 'p') }
         'Exception::DB::Insert',
         'Cannot insert database that is not linked to a template';
 };
+
+sub check_required_attributes_for_save {
+    my $create_sub = shift;
+    my $all_params_hash = shift;
+
+    foreach my $missing ( keys %$all_params_hash ) {
+        my %params = %$all_params_hash;
+        delete $params{$missing};
+        throws_ok { $create_sub->(%params) }
+            'Exception::RequiredParamMissing',
+            "$missing is a requried param";
+    }
+}
 
 subtest get_template => sub {
     plan tests => scalar(@templates) * 2;

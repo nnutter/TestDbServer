@@ -10,3 +10,4 @@ requires 'Test::More';
 requires 'Test::Exception';
 requires 'Moose', '2.1';
 requires 'Exception::Class';
+requires 'MooseX::NonMoose';

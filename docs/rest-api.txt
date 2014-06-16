@@ -1,3 +1,17 @@
+GET /
+
+Get basic server information
+
+Returns 200 and JSON in the body
+
+{
+    template_count: Integer - count of the templates stored
+    database_count: Integer - count of live databases
+    file_path: String - Path on the server where template files are stored
+}
+
+----------------------------------------------------
+
 GET /templates
 
 Get a list of the available database dumps/templates

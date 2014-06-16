@@ -220,6 +220,7 @@ sub _count_entities {
         || Exception::DB::Select::Execute->throw(error => $dbh->errstr, sql => $sql);
 
     my @row = $sth->fetchrow_array;
+    $sth->finish;
     return $row[0];
 }
 

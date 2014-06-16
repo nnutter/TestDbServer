@@ -1,5 +1,4 @@
 use TestDbServer::Exceptions;
-use TestDbServer::DbStorage::Exceptions;
 use DBI;
 
 package TestDbServer::DbStorage::SQLite;
@@ -105,7 +104,8 @@ sub _verify_required_params {
     my $required_list = shift;
 
     if (my @missing = grep { ! exists $param_hash->{$_} } @$required_list) {
-        Exception::RequiredParamMissing->throw(error => 'Required parameter missing', param => \@missing );
+        Exception::RequiredParamMissing->throw(error => 'Required parameters missing: '.join(', ',@missing ),
+                                               params => \@missing);
     }
     return 1;
 }

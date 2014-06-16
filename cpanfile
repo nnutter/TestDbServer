@@ -9,5 +9,4 @@ requires 'Sub::Name';
 requires 'Test::More';
 requires 'Test::Exception';
 requires 'Moose', '2.1';
-requires 'Throwable', '0.2';
-
+requires 'Exception::Class';

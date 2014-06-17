@@ -34,19 +34,31 @@ sub _setup_routes {
 
     # Normal route to controller
     $r->get('/')->to('info#root');
+
+    $r->get('/templates')->to('template_routes#list');
+    $r->get('/templates/:id')->to('template_routes#get');
+    $r->put('/templates/:id')->to('template_routes#save');
+    $r->delete('/templates/:id')->to('template_routes#delete');
+
+    $r->get('/databases')->to('database_routes#list');
+    $r->post('/databases')->to('database_routes#create');
+    $r->get('/databases/:id')->to('database_routes#get');
+    $r->patch('/databases/:id')->to('database_routes#patch');
+    $r->delete('/databases/:id')->to('database_routes#delete');
 }
 
 sub _build_db_storage {
     my $self = shift;
 
-    my $storage;
-    if ($self->mode eq 'development') {
-        require TestDbServer::DbStorage::SQLite;
-        $storage = TestDbServer::DbStorage::SQLite->new(app => $self);
-    } else {
-        Carp::croak('Unknown run mode ',$self->mode);
-    }
-    return $storage;
+    TestDbServer::Schema->initialize($self);
+
+    my $config = $self->plugin('Config');
+
+    return TestDbServer::Schema->connect(
+                $config->{db_connect_string},
+                $config->{db_user},
+                $config->{db_password},
+            );
 }
 
 sub _build_file_storage {

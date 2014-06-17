@@ -4,7 +4,11 @@ use Exception::Class (
     Exception::RequiredParamMissing => {
         isa => 'Exception::BaseException',
         description => 'Required parameter is missing',
-        fields => 'params',
+        fields => ['params'],
+    },
+
+    Exception::NotInitialized => {
+        isa => 'Exception::BaseException',
     },
 
     # For some reason, we can't call it Exception::DB.  When we go

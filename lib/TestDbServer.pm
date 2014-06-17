@@ -1,3 +1,5 @@
+use TestDbServer::Schema;
+
 package TestDbServer;
 
 use Moose;
@@ -6,7 +8,7 @@ extends 'Mojolicious';
 
 has db_storage => (
     is => 'ro',
-    isa => 'TestDbServer::DbStorage',
+    isa => 'TestDbServer::Schema',
     lazy_build => 1,
 );
 has file_storage => (

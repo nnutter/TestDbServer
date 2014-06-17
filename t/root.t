@@ -9,9 +9,7 @@ plan tests => 2;
 
 my $t = Test::Mojo->new('TestDbServer');
 my $app = $t->app;
-
-my $temp_db = File::Temp->new(TEMPLATE => 'testdbserver_root_XXXXX', SUFFIX => 'sqlite3');
-$app->config->{'db_connect_string'} = "dbi:SQLite:${temp_db}";
+$app->mode('test_harness');
 
 subtest 'root with no db entities' => sub {
     plan tests => 5;

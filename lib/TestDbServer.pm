@@ -56,8 +56,17 @@ sub _build_db_storage {
 
     my $config = $self->plugin('Config');
 
+    my $test_connect_string;
+    if ($self->mode eq 'test_harness') {
+        require File::Temp;
+        my $temp_file = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
+        $test_connect_string = 'dbi:SQLite:' . $temp_file->filename;
+        $self->{__temp_db_file__} = $temp_file;
+
+    }
+
     return TestDbServer::Schema->connect(
-                $config->{db_connect_string},
+                $test_connect_string || $config->{db_connect_string},
                 $config->{db_user},
                 $config->{db_password},
             );

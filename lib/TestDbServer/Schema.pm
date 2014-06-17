@@ -53,8 +53,8 @@ sub _initialize_sources {
     }
 }
 
-# create_database(), get_database(), delete_database()
-# create_template(), get_template(), delete_template()
+# create_database(), search_database(), find_database(), delete_database()
+# create_template(), search_template(), find_template(), delete_template()
 foreach my $type ( qw( database template ) ) {
     _sub_creator($type, 'create');
     _sub_creator($type, 'search');
@@ -64,9 +64,17 @@ foreach my $type ( qw( database template ) ) {
         $self->resultset(ucfirst($type))->find(@_);
     };
     my $find_name = "find_${type}";
+
+    my $delete_sub = sub {
+        my($self, $id) = @_;
+        $self->$find_name($id)->delete();
+    };
+    my $delete_name = "delete_${type}";
+
     do {
         no strict 'refs';
         *$find_name = $find_sub;
+        *$delete_name = $delete_sub;
     };
 }    
 

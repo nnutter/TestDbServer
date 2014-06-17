@@ -4,7 +4,7 @@ use parent 'TestDbServer::Schema::ResultBase';
 __PACKAGE__->table('db_template');
 __PACKAGE__->add_columns(qw(template_id name note file_path create_time last_used_time));
 __PACKAGE__->set_primary_key('template_id');
-__PACKAGE__->has_many(databases => 'TestDbServer::Schema::Database', 'template_id');
+__PACKAGE__->has_many(databases => 'TestDbServer::Schema::Result::Database', 'template_id');
 
 sub _create_table_sql_SQLite {
     q(

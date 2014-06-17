@@ -10,7 +10,7 @@ use FakeApp;
 use strict;
 use warnings;
 
-plan tests => 8;
+plan tests => 10;
 
 my($schema, $temp_db_file);
 
@@ -150,6 +150,41 @@ subtest count => sub {
     $count = $schema->search_database();
     is($count->count, scalar(@databases), 'count databases');
 };
+
+# $databases[2] is linked to $templates[1]
+subtest delete_database => sub {
+    plan tests => 3;
+
+    dies_ok { $schema->delete_database('garbage') }
+        'Deleting unknown database throws exception';
+
+    delete_thing('database', $databases[2]->database_id);
+};
+
+subtest delete_template => sub {
+    plan tests => 5;
+
+    dies_ok { $schema->delete_template('garbage') }
+        'Deleting unknown template throws exception';
+
+    throws_ok { $schema->delete_template($templates[0]->template_id) }
+        'DBIx::Class::Exception',
+        'Cannot remove template with linked databases';
+    ok($schema->find_template($templates[0]->template_id), 'template still exists');
+
+    delete_thing('template', $templates[1]->template_id);
+};
+
+sub delete_thing {
+    my($thing_type, $id) = @_;
+
+    my $delete_sub = "delete_${thing_type}";
+    ok($schema->$delete_sub($id), "Delete $thing_type");
+
+    my $find_sub = "find_${thing_type}";
+    ok(! $schema->$find_sub($id), "$thing_type was deleted");
+}
+
 
 sub _assert_all_matching {
     my($got_resultset, $expected_list, $label) = @_;

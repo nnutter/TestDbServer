@@ -11,6 +11,21 @@ use Exception::Class (
         isa => 'Exception::BaseException',
     },
 
+    Exception::CannotMakeDirectory => {
+        isa => 'Exception::BaseException',
+        fields => ['path'],
+    },
+
+    Exception::FileExists => {
+        description => 'File exists',
+        isa => 'Exception::BaseException',
+        fields => ['path'],
+    },
+
+    Exception::CannotOpenFile => {
+        isa => 'Exception::BaseException',
+        fields => ['path'],
+    },
 );
 
 package Exception::BaseException;

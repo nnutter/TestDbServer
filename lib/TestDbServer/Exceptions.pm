@@ -14,14 +14,23 @@ use Exception::Class (
 );
 
 package Exception::BaseException;
-use Carp;
-our @CARP_NOT = qw( Test::Builder Exception::Class::Base );
 
 sub full_message {
     my $self = shift;
 
-    my $message = $self->SUPER::full_message(@_);
-    return Carp::shortmess($message);
+    my $class = ref($self);
+    return "$class: " . $self->error . " at " . $self->_find_source_location();
+}
+
+sub _find_source_location {
+    my $self = shift;
+
+    my $frame = $self->trace->next_frame;
+
+    my $fields_string = join("\n\t", map { "$_: " . $self->$_ } $self->Fields);
+    my $message = $frame->filename . ': ' . $frame->line;
+    $message .= "\n\t$fields_string\n" if length($fields_string);
+    return $message;
 }
 
 1;

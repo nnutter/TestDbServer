@@ -143,7 +143,8 @@ subtest 'based on database' => sub {
                 ->json_has('/password')
                 ->json_has('/expires');
 
-        my $database_details = Mojo::JSON::decode_json($create_database->tx->res->body);
+        my $body = $create_database->tx->res->body;
+        my $database_details = Mojo::JSON::decode_json($body) if $create_database->tx->res->is_status_class(200);
         my $database_id = $database_details->{id};
 
         $t->post_ok("/templates?based_on=$database_id")

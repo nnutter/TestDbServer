@@ -23,7 +23,7 @@ sub get {
 
     my $template = $schema->find_template($id);
     if ($template) {
-        my %template = map { $_ => $template->$_ } qw(template_id name note file_path create_time last_used_time);
+        my %template = map { $_ => $template->$_ } qw(template_id name owner note file_path create_time last_used_time);
         $self->render(json => \%template);
     } else {
         $self->render_not_found;
@@ -45,6 +45,7 @@ sub _save_file {
     my $self = shift;
 
     my $name = $self->param('name');
+    my $owner = $self->param('owner');
     my $note = $self->param('note');
     my $upload = $self->req->upload('file');
 
@@ -55,7 +56,7 @@ sub _save_file {
     my($template_id, $return_code);
     try {
         $schema->txn_do(sub {
-            my $template = $schema->create_template(name => $name, note => $note, file_path => $upload_filename);
+            my $template = $schema->create_template(name => $name, owner => $owner, note => $note, file_path => $upload_filename);
             $file_storage->save_upload($upload);
             $template_id = $template->template_id;
             $return_code = 201;

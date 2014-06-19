@@ -40,40 +40,40 @@ subtest initialize => sub {
 
 my @templates;
 subtest save_template => sub {
-    plan tests => 6;
+    plan tests => 7;
 
-    my $template_1 = $schema->create_template(name => 'template 1', file_path => '/tmp/file1', note => 'hi there');
+    my $template_1 = $schema->create_template(name => 'template 1', owner => 'bubba', file_path => '/tmp/file1', note => 'hi there');
     ok($template_1,'Save template with a note');
     push @templates, $template_1;
 
-    my $template_2 = $schema->create_template(name => 'template_2', file_path => '/tmp/file2');
+    my $template_2 = $schema->create_template(name => 'template_2', owner => 'bubba', file_path => '/tmp/file2');
     ok($template_2, 'Save template without a note');
     push @templates, $template_2;
 
-    throws_ok { $schema->create_template(name => 'template 1', file_path => 'garbage', note => 'garbage') }
+    throws_ok { $schema->create_template(name => 'template 1', owner => 'bubba', file_path => 'garbage', note => 'garbage') }
         'DBIx::Class::Exception',
         'Cannot save_template() with duplicate name';
 
-    throws_ok { $schema->create_template(name => 'duplicate', file_path => '/tmp/file1') }
+    throws_ok { $schema->create_template(name => 'duplicate', owner => 'bubba', file_path => '/tmp/file1') }
         'DBIx::Class::Exception',
         'Cannot save_template() with duplicate file_path';
 
     check_required_attributes_for_save(
         sub { $schema->create_template(@_) },
-        { name => 'template name', file_path => '/path/to/file' },
+        { name => 'template name', file_path => '/path/to/file', owner => 'bubba' },
     );
 };
 
 my @databases;
 subtest save_database => sub {
-    plan tests => 11;
+    plan tests => 12;
 
     my @database_info = (
-        { host => 'localhost', port => 123, name => 'joe', template_id => $templates[0]->template_id },
-        { host => 'localhost', port => 123, name => 'bob', template_id => $templates[0]->template_id },
-        { host => 'other', port => 123, name => 'bob', template_id => $templates[0]->template_id },
-        { host => 'localhost', port => 456, name => 'bob', template_id => $templates[0]->template_id },
-        { host => 'other', port => 999, name => 'frank', template_id => $templates[1]->template_id },
+        { host => 'localhost', port => 123, name => 'joe', owner => 'bubba', template_id => $templates[0]->template_id },
+        { host => 'localhost', port => 123, name => 'bob', owner => 'bubba', template_id => $templates[0]->template_id },
+        { host => 'other', port => 123, name => 'bob', owner => 'bubba', template_id => $templates[0]->template_id },
+        { host => 'localhost', port => 456, name => 'bob', owner => 'bubba', template_id => $templates[0]->template_id },
+        { host => 'other', port => 999, name => 'frank', owner => 'bubba', template_id => $templates[1]->template_id },
     );
 
     for (my $i = 0; $i < @database_info; $i++) {
@@ -84,10 +84,10 @@ subtest save_database => sub {
 
     check_required_attributes_for_save(
         sub { $schema->create_database(@_) },
-        { host => 'localhost', port => 123, name => 'joe', template_id => $templates[0] }
+        { host => 'localhost', port => 123, name => 'joe', owner => 'bubba', template_id => $templates[0] }
     );
 
-    throws_ok { $schema->create_database(template_id => 'garbage',  host => 'h', port => 1, user => 'u', password => 'p') }
+    throws_ok { $schema->create_database(template_id => 'garbage', host => 'h', port => 1, name => 'n', owner => 'o') }
         'DBIx::Class::Exception',
         'Cannot insert database that is not linked to a template';
 

@@ -1,4 +1,5 @@
 use TestDbServer::Schema;
+use TestDbServer::FileStorage;
 
 package TestDbServer;
 
@@ -39,7 +40,7 @@ sub _setup_routes {
 
     $r->get('/templates')->to('template_routes#list');
     $r->get('/templates/:id')->to('template_routes#get');
-    $r->put('/templates/:id')->to('template_routes#save');
+    $r->post('/templates')->to('template_routes#save');
     $r->delete('/templates/:id')->to('template_routes#delete');
 
     $r->get('/databases')->to('database_routes#list');
@@ -75,7 +76,17 @@ sub _build_db_storage {
 sub _build_file_storage {
     my $self = shift;
 
-#    my $storage = TestDbServer::FileStorage->new($self);
+    my $config = $self->plugin('Config');
+
+    my $base_path;
+    if ($self->mode eq 'test_harness') {
+        require File::Temp;
+        $base_path = File::Temp::tempdir( CLEANUP => 1);
+
+    } else {
+        $base_path = $config->{template_base_path};
+    }
+    return TestDbServer::FileStorage->new(base_path => $base_path, app => $self);
 }
 
 1;

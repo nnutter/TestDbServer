@@ -28,8 +28,7 @@ subtest 'root with one template and one database' => sub {
     my $template = $storage->create_template(name => 'foo', file_path => 'bar');
     my $database = $storage->create_database(host => 'localhost',
                                              port => 123,
-                                             user => 'bob',
-                                             password => 'secret',
+                                             name => 'bob',
                                              template_id => $template->template_id);
     $t->get_ok('/')
         ->status_is(200)

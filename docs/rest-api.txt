@@ -96,8 +96,7 @@ Returns 200 and JSON in the body
     id: String - identifier for this database
     host: String - hostname for the DB
     port: Integer - port for the DB
-    user: String - username for the DB
-    password: String - passwd for the DB
+    name: String - name for the DB
     expires: Integer - Unix time when this database will be automatically deleted
 }
 
@@ -112,8 +111,7 @@ Returns 201 and JSON in the body
     id: String - identifier for this database
     host: String - hostname for the DB
     port: Integer - port for the DB
-    user: String - username for the DB
-    password: String - passwd for the DB
+    name: String - name for the DB
     expires: Integer - Unix time when this database will be automatically deleted
 }
 
@@ -128,8 +126,7 @@ Returns 201 and JSON in the body
     id: String - identifier for this database
     host: String - hostname for the DB
     port: Integer - port for the DB
-    user: String - username for the DB
-    password: String - passwd for the DB
+    name: String - name for the DB
     expires: Integer - Unix time when this database will be automatically deleted
 }
 
@@ -145,8 +142,7 @@ Returns 200 and JSON in the body {
     id: String - identifier for this database
     host: String - hostname for the DB
     port: Integer - port for the DB
-    user: String - username for the DB
-    password: String - passwd for the DB
+    name: String - name for the DB
     expires: Integer - Unix time when this database will be automatically deleted
 }
 

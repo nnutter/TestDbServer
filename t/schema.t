@@ -66,12 +66,14 @@ subtest save_template => sub {
 
 my @databases;
 subtest save_database => sub {
-    plan tests => 9;
+    plan tests => 11;
 
     my @database_info = (
-        { host => 'localhost', port => 123, user => 'joe', password => 'secret', template_id => $templates[0]->template_id },
-        { host => 'localhost', port => 321, user => 'bob', password => 'secret', template_id => $templates[0]->template_id },
-        { host => 'other', port => 999, user => 'frank', password => 'secret', template_id => $templates[1]->template_id },
+        { host => 'localhost', port => 123, name => 'joe', template_id => $templates[0]->template_id },
+        { host => 'localhost', port => 123, name => 'bob', template_id => $templates[0]->template_id },
+        { host => 'other', port => 123, name => 'bob', template_id => $templates[0]->template_id },
+        { host => 'localhost', port => 456, name => 'bob', template_id => $templates[0]->template_id },
+        { host => 'other', port => 999, name => 'frank', template_id => $templates[1]->template_id },
     );
 
     for (my $i = 0; $i < @database_info; $i++) {
@@ -82,12 +84,18 @@ subtest save_database => sub {
 
     check_required_attributes_for_save(
         sub { $schema->create_database(@_) },
-        { host => 'localhost', port => 123, user => 'joe', password => 'secret', source_template_id => $templates[0] }
+        { host => 'localhost', port => 123, name => 'joe', template_id => $templates[0] }
     );
 
     throws_ok { $schema->create_database(template_id => 'garbage',  host => 'h', port => 1, user => 'u', password => 'p') }
         'DBIx::Class::Exception',
         'Cannot insert database that is not linked to a template';
+
+    my %duplicate_host_port_name = %{$database_info[0]};
+    $duplicate_host_port_name{template_id} = $templates[1]->template_id;
+    throws_ok { $schema->create_database(%duplicate_host_port_name) }
+        'DBIx::Class::Exception',
+        'Cannot insert database with duplicate host port and name';
 };
 
 sub check_required_attributes_for_save {
@@ -158,7 +166,7 @@ subtest delete_database => sub {
     dies_ok { $schema->delete_database('garbage') }
         'Deleting unknown database throws exception';
 
-    delete_thing('database', $databases[2]->database_id);
+    delete_thing('database', $databases[-1]->database_id);
 };
 
 subtest delete_template => sub {

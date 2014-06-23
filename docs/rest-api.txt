@@ -1,3 +1,17 @@
+GET /
+
+Get basic server information
+
+Returns 200 and JSON in the body
+
+{
+    template_count: Integer - count of the templates stored
+    database_count: Integer - count of live databases
+    file_path: String - Path on the server where template files are stored
+}
+
+----------------------------------------------------
+
 GET /templates
 
 Get a list of the available database dumps/templates
@@ -18,6 +32,7 @@ Get info about a particular template
 Returns 200 and JSON in the body
 {
     id: String
+    name: String - Short, human readable name
     note: String - human readable info about this template
 }
 
@@ -25,23 +40,29 @@ Returns 404 if there's no template with that ID
 
 ------------------------------------------------------
 
-PUT /templates/<id>
+POST /templates/
 
 Upload a new template as a file upload.  The template data should
 be a gzipped dump from another database as created with this command line:
 pg_dump -h <hostname> -p <port> -U <user> <database> | gzip -c > dump-file.gz
 
-Returns 201 if successful.
-Returns 403 if there is already a template with that id.
+The following args are accepted:
+name: String - Short, human readable name (required)
+note: String - human readable info about this template (optional)
+file: file upload (required)
+
+Returns 201 if successful, and the URL of the new uploaded thing in the Location header
+Returns 403 if there is already a template with that name or file name
 
 -------------------------------------------------------
 
-PUT /templates/<id>?based_on=<database-id>
+POST /templates?based_on=<database-id>
 
-Dump the named database as a new template.
+Dump the named database as a new template.  Also accepts the 'name' (required) and 'note' params.
 
 Returns 201 if successful.
-Returns 403 if there is already a template with that id.
+Returns 403 if there's already a template with that name
+Returns 404 if there's no database with that ID
 
 --------------------------------------------------------
 

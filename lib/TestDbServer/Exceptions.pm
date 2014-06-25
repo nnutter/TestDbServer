@@ -26,6 +26,16 @@ use Exception::Class (
         isa => 'Exception::BaseException',
         fields => ['path'],
     },
+
+    Exception::CannotCreateDatabase => {
+        isa => 'Exception::BaseException',
+        fields => [qw(exit_code output)],
+    },
+
+    Exception::CannotDropDatabase => {
+        isa => 'Exception::BaseException',
+        fields => [qw(exit_code output)],
+    },
 );
 
 package Exception::BaseException;

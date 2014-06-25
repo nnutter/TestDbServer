@@ -6,11 +6,20 @@ use Mojo::JSON;
 
 use File::Temp;
 
+use TestDbServer::Configuration;
 plan tests => 6;
+
+my $file_storage_path = File::Temp::tempdir( CLEANUP => 1);
+my $db = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
+my $connect_string = 'dbi:SQLite:' . $db->filename;
+my $config = TestDbServer::Configuration->new(
+                    file_storage_path => $file_storage_path,
+                    db_connect_string => $connect_string
+                );
 
 my $t = Test::Mojo->new('TestDbServer');
 my $app = $t->app;
-$app->mode('test_harness');
+$app->configuration($config);
 
 my @templates;
 subtest 'list' => sub {

@@ -1,5 +1,6 @@
 use TestDbServer::Schema;
 use TestDbServer::FileStorage;
+use TestDbServer::Configuration;
 
 package TestDbServer;
 
@@ -17,10 +18,10 @@ has file_storage => (
     isa => 'TestDbServer::FileStorage',
     lazy_build => 1,
 );
-has file_storage_path => (
-    is => 'ro',
-    isa => 'Str',
-    default => '/home/archive/test-db-server-templates',
+has configuration => (
+    is => 'rw',
+    isa => 'TestDbServer::Configuration',
+    lazy_build => 1,
 );
 
 # This method will run once at server start
@@ -55,38 +56,24 @@ sub _build_db_storage {
 
     TestDbServer::Schema->initialize($self);
 
-    my $config = $self->plugin('Config');
-
-    my $test_connect_string;
-    if ($self->mode eq 'test_harness') {
-        require File::Temp;
-        my $temp_file = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
-        $test_connect_string = 'dbi:SQLite:' . $temp_file->filename;
-        $self->{__temp_db_file__} = $temp_file;
-
-    }
-
-    return TestDbServer::Schema->connect(
-                $test_connect_string || $config->{db_connect_string},
-                $config->{db_user},
-                $config->{db_password},
-            );
+    TestDbServer::Schema->connect(
+            $self->configuration->db_connect_string,
+            $self->configuration->db_user,
+            $self->configuration->db_password,
+        );
 }
 
 sub _build_file_storage {
     my $self = shift;
 
+    my $base_path = $self->configuration->file_storage_path;
+    TestDbServer::FileStorage->new(base_path => $base_path, app => $self);
+}
+
+sub _build_configuration {
+    my $self = shift;
     my $config = $self->plugin('Config');
-
-    my $base_path;
-    if ($self->mode eq 'test_harness') {
-        require File::Temp;
-        $base_path = File::Temp::tempdir( CLEANUP => 1);
-
-    } else {
-        $base_path = $config->{template_base_path};
-    }
-    return TestDbServer::FileStorage->new(base_path => $base_path, app => $self);
+    TestDbServer::Configuration->new_from_app_config($config);
 }
 
 1;

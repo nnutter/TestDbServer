@@ -6,11 +6,20 @@ use Mojo::JSON;
 
 use File::Temp;
 
+use TestDbServer::Configuration;
 plan tests => 6;
+
+my $file_storage_path = File::Temp::tempdir( CLEANUP => 1);
+my $db = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
+my $connect_string = 'dbi:SQLite:' . $db->filename;
+my $config = TestDbServer::Configuration->new(
+                    file_storage_path => $file_storage_path,
+                    db_connect_string => $connect_string
+                );
 
 my $t = Test::Mojo->new('TestDbServer');
 my $app = $t->app;
-$app->mode('test_harness');
+$app->configuration($config);
 
 my @templates;
 subtest 'list' => sub {
@@ -22,8 +31,8 @@ subtest 'list' => sub {
 
     
     my $db = $app->db_storage;
-    @templates = (  $db->create_template(name => 'foo', file_path => 'bar'),
-                    $db->create_template(name => 'baz', file_path => 'quux')
+    @templates = (  $db->create_template(name => 'foo', owner => 'bubba', file_path => 'bar'),
+                    $db->create_template(name => 'baz', owner => 'bubba', file_path => 'quux')
                 );
 
     my $expected_data = [ $templates[0]->template_id, $templates[1]->template_id ];
@@ -63,18 +72,20 @@ subtest 'delete' => sub {
 };
 
 subtest 'upload file' => sub {
-    plan tests => 12;
+    plan tests => 9;
 
     my $upload_file = File::Temp->new();
     $upload_file->print("This is test content\n");
     $upload_file->close();
 
     my $template_name = 'test upload';
+    my $template_owner = 'bubba';
     my $template_note = 'This is some test data';
 
     my $test = $t->post_ok('/templates' =>
                     form => {
                         name => $template_name,
+                        owner => $template_owner,
                         note => $template_note,
                         file => { file => $upload_file->filename },
                     })
@@ -83,16 +94,11 @@ subtest 'upload file' => sub {
 
     my $location = $test->tx->res->headers->location;
     $t->get_ok($location)
-        ->json_is('/name' => $template_name)
-        ->json_is('/note' => $template_note)
-        ->json_has('/file_path');
-
-    $t->get_ok($location)
         ->status_is(200)
-        ->json_is('/name', $template_name)
-        ->json_is('/note', $template_note)
+        ->json_is('/name' => $template_name)
+        ->json_is('/owner' => $template_owner)
+        ->json_is('/note' => $template_note)
         ->json_is('/file_path', File::Basename::basename($upload_file->filename))
-
 };
 
 subtest 'upload duplicate' => sub {
@@ -103,10 +109,12 @@ subtest 'upload duplicate' => sub {
     $upload_file->close();
 
     my $template_name = 'duplicate upload';
+    my $template_owner = 'bubba';
 
     $t->post_ok('/templates' =>
                     form => {
                         name => $template_name,
+                        owner => $template_owner,
                         file => { file => $upload_file->filename }
                     },
                 )
@@ -115,6 +123,7 @@ subtest 'upload duplicate' => sub {
     $t->post_ok('/templates' =>
                     form => {
                         name => $template_name . 'and more',
+                        owner => $template_owner,
                         file => { file => $upload_file->filename }
                     },
                 )
@@ -123,6 +132,7 @@ subtest 'upload duplicate' => sub {
     $t->post_ok('/templates' =>
                     form => {
                         name => $template_name,
+                        owner => $template_owner,
                         file => { file => __FILE__ }
                     },
                 )
@@ -143,7 +153,8 @@ subtest 'based on database' => sub {
                 ->json_has('/password')
                 ->json_has('/expires');
 
-        my $database_details = Mojo::JSON::decode_json($create_database->tx->res->body);
+        my $body = $create_database->tx->res->body;
+        my $database_details = Mojo::JSON::decode_json($body) if $create_database->tx->res->is_status_class(200);
         my $database_id = $database_details->{id};
 
         $t->post_ok("/templates?based_on=$database_id")

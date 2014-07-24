@@ -9,7 +9,7 @@ use TestDbServer::PostgresInstance;
 use strict;
 use warnings;
 
-plan tests => 5;
+plan tests => 6;
 
 my $host = 'localhost';
 my $port = 5434;
@@ -28,9 +28,10 @@ ok($pg->name, 'has a name: '. $pg->name);
 ok($pg->createdb, 'Create database');
 
 my $db_name = $pg->name;
-my $dbh = DBI->connect("dbi:Pg:dbname=$db_name;host=$host;port=$port", $owner, '');
-ok($dbh, 'Connected');
-
-undef $dbh;
+my $connect_to_db = sub {
+        DBI->connect("dbi:Pg:dbname=$db_name;host=$host;port=$port", $owner, '', { PrintError => 0 });
+    };
+ok($connect_to_db->(), 'Connected');
 
 ok($pg->dropdb, 'Delete database');
+ok( ! $connect_to_db->(), 'Cannot connect to deleted database');

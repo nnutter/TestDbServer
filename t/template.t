@@ -72,11 +72,13 @@ subtest 'delete' => sub {
 };
 
 subtest 'upload file' => sub {
-    plan tests => 9;
+    plan tests => 11;
 
+    my $upload_file_contents = "This is test content\n";
     my $upload_file = File::Temp->new();
-    $upload_file->print("This is test content\n");
+    $upload_file->print($upload_file_contents);
     $upload_file->close();
+    my $upload_file_name = File::Basename::basename($upload_file->filename);
 
     my $template_name = 'test upload';
     my $template_owner = 'bubba';
@@ -98,7 +100,14 @@ subtest 'upload file' => sub {
         ->json_is('/name' => $template_name)
         ->json_is('/owner' => $template_owner)
         ->json_is('/note' => $template_note)
-        ->json_is('/file_path', File::Basename::basename($upload_file->filename))
+        ->json_is('/file_path', File::Basename::basename($upload_file_name));
+
+    ok(-f $app->file_storage->path_for_name($upload_file_name),
+        'Uploaded file exists');
+
+    is(join('', $app->file_storage->open_file($upload_file_name)->getlines()),
+        $upload_file_contents,
+        'Upload file contents');
 };
 
 subtest 'upload duplicate' => sub {

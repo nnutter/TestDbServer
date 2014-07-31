@@ -4,6 +4,8 @@ use Mojo::Base 'Mojolicious::Controller';
 use Try::Tiny;
 use File::Basename;
 
+use TestDbServer::Command::SaveTemplateFile;
+
 sub list {
     my $self = shift;
 
@@ -44,21 +46,20 @@ sub save {
 sub _save_file {
     my $self = shift;
 
-    my $name = $self->param('name');
-    my $owner = $self->param('owner');
-    my $note = $self->param('note');
-    my $upload = $self->req->upload('file');
-
-    my $upload_filename = File::Basename::basename($upload->filename);
     my $schema = $self->app->db_storage;
-    my $file_storage = $self->app->file_storage;
-
     my($template_id, $return_code);
     try {
+        my $cmd = TestDbServer::Command::SaveTemplateFile->new(
+                name => $self->param('name') || undef,
+                owner => $self->param('owner') || undef,
+                note => $self->param('note') || undef,
+                upload => $self->req->upload('file'),
+                schema => $schema,
+                file_storage => $self->app->file_storage,
+            );
+
         $schema->txn_do(sub {
-            my $template = $schema->create_template(name => $name, owner => $owner, note => $note, file_path => $upload_filename);
-            $file_storage->save_upload($upload);
-            $template_id = $template->template_id;
+            $template_id = $cmd->execute();
             $return_code = 201;
         });
     }

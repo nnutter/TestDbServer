@@ -27,14 +27,25 @@ use Exception::Class (
         fields => ['path'],
     },
 
-    Exception::CannotCreateDatabase => {
+    Exception::ShellCommandFailed => {
         isa => 'Exception::BaseException',
         fields => [qw(exit_code output)],
     },
 
+    Exception::CannotCreateDatabase => {
+        isa => 'Exception::ShellCommandFailed',
+    },
+
     Exception::CannotDropDatabase => {
-        isa => 'Exception::BaseException',
-        fields => [qw(exit_code output)],
+        isa => 'Exception::ShellCommandFailed',
+    },
+
+    Exception::CannotExportDatabase => {
+        isa => 'Exception::ShellCommandFailed',
+    },
+
+    Exception::CannotImportDatabase => {
+        isa => 'Exception::ShellCommandFailed',
     },
 );
 

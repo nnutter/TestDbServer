@@ -2,6 +2,7 @@ use TestDbServer::Exceptions;
 use File::Basename;
 use File::Spec;
 use IO::File;
+use File::Copy;
 
 package TestDbServer::FileStorage;
 
@@ -32,16 +33,32 @@ sub BUILD {
 sub save_upload {
     my($self, $upload) = @_;
 
-    my $base_name = File::Basename::basename($upload->filename);
+    my $stored_filename = $self->_validate_saved_file($upload->filename);
+    $upload->move_to($stored_filename);
+
+    return File::Basename::basename($stored_filename);
+}
+
+sub save {
+    my($self, $pathname) = @_;
+
+    my $stored_filename = $self->_validate_saved_file($pathname);
+    File::Copy::move($pathname, $stored_filename);
+
+    return File::Basename::basename($stored_filename);
+}
+
+sub _validate_saved_file {
+    my($self, $pathname) = @_;
+
+    my $base_name = File::Basename::basename($pathname);
 
     my $stored_filename = $self->path_for_name($base_name);
     if (-f $stored_filename) {
         Exception::FileExists->throw(path => $stored_filename);
     }
 
-    $upload->move_to($stored_filename);
-
-    return $base_name;
+    return $stored_filename;
 }
 
 sub path_for_name {

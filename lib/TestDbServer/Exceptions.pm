@@ -51,6 +51,16 @@ use Exception::Class (
     Exception::SuperuserRequired => {
         isa => 'Exception::BaseException',
     },
+
+    Exception::DatabaseNotFound => {
+        isa => 'Exception::BaseException',
+        fields => [qw(database_id)],
+    },
+
+    Exception::TemplateNotFound => {
+        isa => 'Exception::BaseException',
+        fields => [qw(template_id)],
+    },
 );
 
 package Exception::BaseException;

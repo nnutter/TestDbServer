@@ -8,12 +8,15 @@ use File::Temp;
 
 use TestDbServer::FileStorage;
 use TestDbServer::Schema;
+use TestDbServer::PostgresInstance;
 use lib 't/lib';
 use FakeApp;
+use DBI;
 
 use TestDbServer::Command::SaveTemplateFile;
+use TestDbServer::Command::CreateTemplateFromDatabase;
 
-plan tests => 1;
+plan tests => 2;
 
 subtest 'save template file' => sub {
     plan tests => 5;
@@ -51,6 +54,60 @@ subtest 'save template file' => sub {
     };
 };
 
+subtest 'create template from database' => sub {
+    plan tests => 6;
+
+    my $app = FakeApp->new();
+    my $pg = new_pg_instance();
+
+    my $schema = new_schema();
+    my $base_template_name = File::Temp::tmpnam();
+
+    my $base_template = $schema->create_template(name => $base_template_name,
+                                                 file_path => '/dev/null',
+                                                 owner => $base_template_name );
+    my $database = $schema->create_database(template_id => $base_template->template_id,
+                                            map { $_ => $pg->$_ } qw( host port name owner ) );
+    # Make a table in the database
+    my $table_name = "test_table_$$";
+    my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
+                                    $pg->name, $pg->host, $pg->port),
+                            $pg->owner,
+                            '');
+    ok($dbi->do("CREATE TABLE $table_name (foo integer NOT NULL PRIMARY KEY)"),
+        'Create table in base database');
+
+    my $new_template_name = File::Temp::tmpnam();
+    my $tmpdir = File::Temp::tempdir();
+    my $file_storage = TestDbServer::FileStorage->new(base_path => $tmpdir, app => $app);
+
+    my $cmd = TestDbServer::Command::CreateTemplateFromDatabase->new(
+                    name => $new_template_name,
+                    note => 'new template from database',
+                    database_id => $database->database_id,
+                    schema => $schema,
+                    file_storage => $file_storage,
+                );
+    ok($cmd, 'new');
+    my $template_id = $cmd->execute();
+    ok($template_id, 'execute');
+
+    my $template = $schema->find_template($template_id);
+    ok($template, 'get created template');
+    my $template_file_path = join('/', $tmpdir, $template->file_path);
+    ok(-f $template_file_path, 'Uploaded file exists');
+
+    do {
+        local $/;
+        open(my $fh, '<', $template_file_path);
+        my $content = <$fh>;
+        like($content, qr(CREATE TABLE $table_name), 'File contents');
+    };
+
+    $dbi->disconnect;
+    $pg->dropdb;
+};
+
 sub new_upload {
     my($name, $contents) = @_;
 
@@ -60,6 +117,23 @@ sub new_upload {
                         ->asset($asset)
                         ->filename($name);
 }
+
+sub new_pg_instance {
+    my $host = 'localhost';
+    my $port = 5434;
+    my $owner = 'genome';
+    my $superuser = 'postgres';
+
+    my $pg = TestDbServer::PostgresInstance->new(
+            host => $host,
+            port => $port,
+            owner => $owner,
+            superuser => $superuser,
+        );
+    $pg->createdb();
+    return $pg;
+}
+
 
 sub new_schema {
     my $app = FakeApp->new();

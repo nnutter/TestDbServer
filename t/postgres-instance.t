@@ -31,11 +31,13 @@ subtest 'create connect delete' => sub {
     ok($pg->createdb, 'Create database');
 
     my $db_name = $pg->name;
-    my $connect_to_db = sub {
-            DBI->connect("dbi:Pg:dbname=$db_name;host=$host;port=$port", $owner, '', { PrintError => 0 });
-        };
-    ok($connect_to_db->(), 'Connected');
+    ok(connect_to_db($db_name), 'Connected');
 
     ok($pg->dropdb, 'Delete database');
-    ok( ! $connect_to_db->(), 'Cannot connect to deleted database');
+    ok( ! connect_to_db($db_name), 'Cannot connect to deleted database');
 };
+
+sub connect_to_db {
+    my $db_name = shift;
+    DBI->connect("dbi:Pg:dbname=$db_name;host=$host;port=$port", $owner, '', { PrintError => 0 });
+}

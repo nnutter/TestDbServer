@@ -20,16 +20,15 @@ sub execute {
 
     my $upload_filename = File::Basename::basename($self->upload->filename);
     my $template_id;
-    $self->schema->txn_do(sub {
-        my $template = $self->schema->create_template(
-                                            name => $self->name,
-                                            owner => $self->owner,
-                                            note => $self->note,
-                                            file_path => $upload_filename,
-                                        );
-        $self->file_storage->save_upload($self->upload);
-        $template_id = $template->template_id;
-    });
+
+    my $template = $self->schema->create_template(
+                                        name => $self->name,
+                                        owner => $self->owner,
+                                        note => $self->note,
+                                        file_path => $upload_filename,
+                                    );
+    $self->file_storage->save_upload($self->upload);
+    $template_id = $template->template_id;
     return $template_id;
 }
 

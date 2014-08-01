@@ -47,6 +47,10 @@ use Exception::Class (
     Exception::CannotImportDatabase => {
         isa => 'Exception::ShellCommandFailed',
     },
+
+    Exception::SuperuserRequired => {
+        isa => 'Exception::BaseException',
+    },
 );
 
 package Exception::BaseException;

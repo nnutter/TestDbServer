@@ -25,7 +25,6 @@ has 'owner' => (
 has 'superuser' => (
     is => 'ro',
     isa => 'Str',
-    required => 1,
 );
 has 'name' => (
     is => 'ro',
@@ -47,6 +46,10 @@ sub createdb {
     my $owner = $self->owner;
     my $superuser = $self->superuser;
     my $name = $self->name;
+
+    unless ($superuser) {
+        Exception::SuperuserRequired->throw();
+    }
 
     my $output = `$createdb -h $host -p $port -U $superuser -O $owner $name 2>&1`;
     if ($? != 0) {

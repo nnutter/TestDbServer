@@ -10,7 +10,7 @@ use TestDbServer::PostgresInstance;
 use strict;
 use warnings;
 
-plan tests => 3;
+plan tests => 4;
 
 my $host = 'localhost';
 my $port = 5434;
@@ -64,6 +64,28 @@ subtest 'import db' => sub {
 
     $dbh->disconnect();
     ok($pg->dropdb(), 'drop database');
+};
+
+subtest 'importdb throws exception' => sub {
+    plan tests => 3;
+
+    my $fh = File::Temp->new();
+    $fh->print('CREATE TABLE foo(foo_id integer NULL KEY)');  # invalid SQL
+    $fh->close();
+
+    my $pg = TestDbServer::PostgresInstance->new(
+                host => $host,
+                port => $port,
+                owner => $owner,
+                superuser => $superuser,
+            );
+    ok($pg->createdb, 'Create database');
+
+    throws_ok { $pg->importdb($fh->filename) }
+            'Exception::CannotImportDatabase',
+            'Importing broken SQL generates exception';
+
+    ok($pg->dropdb(), 'drop db');
 };
 
 subtest 'export db' => sub {

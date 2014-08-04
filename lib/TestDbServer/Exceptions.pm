@@ -29,7 +29,7 @@ use Exception::Class (
 
     Exception::ShellCommandFailed => {
         isa => 'Exception::BaseException',
-        fields => [qw(exit_code output)],
+        fields => [qw(exit_code signal core_dump output)],
     },
 
     Exception::CannotCreateDatabase => {

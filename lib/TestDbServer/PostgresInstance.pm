@@ -109,9 +109,12 @@ sub importdb {
     my $owner = $self->owner;
     my $name = $self->name;
 
-    my $output = qx($psql -h $host -p $port -U $owner -d $name -f $filename 2>&1);
+    my $output = qx($psql -h $host -p $port -U $owner -d $name -f $filename --set=ON_ERROR_STOP=1 2>&1);
     if ($? != 0) {
-        Exception::CannotImportDatabase->throw(error => "$psql failed", output => $output, exit_code => $?);
+        my $exit_code = $? >> 8;
+        my $signal = $? & 127;
+        my $core_dump = $? & 128;
+        Exception::CannotImportDatabase->throw(error => "$psql failed", output => $output, exit_code => $exit_code, signal => $signal, core_dump => $core_dump);
     }
     return 1;
 }

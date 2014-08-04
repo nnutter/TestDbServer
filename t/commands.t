@@ -15,8 +15,9 @@ use DBI;
 
 use TestDbServer::Command::SaveTemplateFile;
 use TestDbServer::Command::CreateTemplateFromDatabase;
+use TestDbServer::Command::CreateDatabase;
 
-plan tests => 2;
+plan tests => 3;
 
 subtest 'save template file' => sub {
     plan tests => 5;
@@ -108,6 +109,60 @@ subtest 'create template from database' => sub {
     $pg->dropdb;
 };
 
+subtest 'create database' => sub {
+    plan tests => 6;
+
+    my $schema = new_schema();
+
+    # blank database
+    my $create_blank_db_cmd = TestDbServer::Command::CreateDatabase->new(
+                                host => pg_host(),
+                                port => pg_port(),
+                                owner => pg_owner(),
+                                superuser => pg_superuser(),
+                                template_id => undef,
+                                schema => $schema,
+                            );
+    ok($create_blank_db_cmd, 'new - blank db');
+    my $blank_db = $create_blank_db_cmd->execute();
+    ok($blank_db->database_id, 'execute - blank db');
+
+    my $blank_pg = TestDbServer::PostgresInstance->new(
+                                host => $blank_db->host,
+                                port => $blank_db->port,
+                                name => $blank_db->name,
+                                owner => $blank_db->owner,
+                        );
+    ok($blank_pg->dropdb, 'drop blank db');
+
+
+    # with a template ID
+    my $template = $schema->create_template(
+                                name => 'foo',
+                                owner => pg_owner(),
+                                file_path => '/dev/null',
+                            );
+    my $create_db_cmd = TestDbServer::Command::CreateDatabase->new(
+                                host => pg_host(),
+                                port => pg_port(),
+                                owner => pg_owner(),
+                                superuser => pg_superuser(),
+                                template_id => $template->template_id,
+                                schema => $schema,
+                            );
+    ok($create_db_cmd, 'new - create with template');
+    my $db = $create_db_cmd->execute();
+    ok($db, 'execute - with template');
+
+    my $db_pg =  TestDbServer::PostgresInstance->new(
+                                host => $db->host,
+                                port => $db->port,
+                                name => $db->name,
+                                owner => $db->owner,
+                        );
+    ok($db_pg->dropdb, 'drop db');
+};
+
 sub new_upload {
     my($name, $contents) = @_;
 
@@ -118,17 +173,17 @@ sub new_upload {
                         ->filename($name);
 }
 
-sub new_pg_instance {
-    my $host = 'localhost';
-    my $port = 5434;
-    my $owner = 'genome';
-    my $superuser = 'postgres';
+sub pg_host { 'localhost' }
+sub pg_port { 5434 }
+sub pg_owner { 'genome' }
+sub pg_superuser { 'postgres' }
 
+sub new_pg_instance {
     my $pg = TestDbServer::PostgresInstance->new(
-            host => $host,
-            port => $port,
-            owner => $owner,
-            superuser => $superuser,
+            host => pg_host(),
+            port => pg_port(),
+            owner => pg_owner(),
+            superuser => pg_superuser(),
         );
     $pg->createdb();
     return $pg;

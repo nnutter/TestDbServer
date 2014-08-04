@@ -16,8 +16,9 @@ use DBI;
 use TestDbServer::Command::SaveTemplateFile;
 use TestDbServer::Command::CreateTemplateFromDatabase;
 use TestDbServer::Command::CreateDatabase;
+use TestDbServer::Command::CreateDatabaseFromTemplate;
 
-plan tests => 3;
+plan tests => 4;
 
 subtest 'save template file' => sub {
     plan tests => 5;
@@ -156,6 +157,51 @@ subtest 'create database' => sub {
                                 port => $db->port,
                                 name => $db->name,
                                 owner => $db->owner,
+                        );
+    ok($db_pg->dropdb, 'drop db');
+};
+
+subtest 'create database from template' => sub {
+    my $schema = new_schema();
+
+    my $file_storage = new_file_storage();
+    my $upload_name = 'wlkjwerl';
+    my $upload = new_upload( $upload_name,
+                             'CREATE TABLE foo(foo_id integer NOT NULL PRIMARY KEY)' );
+    $file_storage->save_upload($upload);
+
+    my $template = $schema->create_template(
+                                name => 'foo',
+                                owner => pg_owner(),
+                                file_path => $upload_name,
+                            );
+
+    my $cmd = TestDbServer::Command::CreateDatabaseFromTemplate->new(
+                            host => pg_host(),
+                            port => pg_port(),
+                            owner => pg_owner(),
+                            superuser => pg_superuser(),
+                            schema => $schema,
+                            file_storage => $file_storage,
+                            template_id => $template->template_id,
+                        );
+    ok($cmd, 'new');
+    my $database = $cmd->execute();
+    ok($database, 'execute');
+
+    my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
+                                    $database->name, $database->host, $database->port),
+                            $database->owner,
+                            '',
+                            { RaiseError => 1 });
+    ok($dbi->do('select * from foo'), 'Table exists');
+    $dbi->disconnect();
+
+    my $db_pg =  TestDbServer::PostgresInstance->new(
+                                host => $database->host,
+                                port => $database->port,
+                                name => $database->name,
+                                owner => $database->owner,
                         );
     ok($db_pg->dropdb, 'drop db');
 };

@@ -22,13 +22,10 @@ plan tests => 3;
 subtest 'save template file' => sub {
     plan tests => 5;
 
-    my $tmpdir = File::Temp::tempdir();
-    my $app = FakeApp->new();
-
     my $upload = new_upload( my $file_name = File::Temp::tmpnam(),
                              my $file_contents = "This is the test contents\n");
 
-    my $file_storage = TestDbServer::FileStorage->new(base_path => $tmpdir, app => $app);
+    my $file_storage = new_file_storage();
     my $schema = new_schema();
 
     my $command = TestDbServer::Command::SaveTemplateFile->new(
@@ -44,7 +41,7 @@ subtest 'save template file' => sub {
 
     my $template = $schema->find_template($template_id);
     ok($template, 'get created template');
-    my $template_file_path = join('/', $tmpdir, $template->file_path);
+    my $template_file_path = $file_storage->path_for_name($template->file_path);
     ok(-f $template_file_path, 'Uploaded file exists');
 
     do {
@@ -196,4 +193,12 @@ sub new_schema {
     
     my(undef,$sqlite_file) = File::Temp::tempfile('command_t_XXXX', SUFFIX => '.sqlite3', UNLINK => 1);
     return TestDbServer::Schema->connect("dbi:SQLite:dbname=$sqlite_file", '','');
+}
+
+sub new_file_storage {
+    my $app = FakeApp->new();
+    my $tmpdir = File::Temp::tempdir();
+
+    my $file_storage = TestDbServer::FileStorage->new(base_path => $tmpdir, app => $app);
+
 }

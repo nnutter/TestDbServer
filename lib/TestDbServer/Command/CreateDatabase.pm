@@ -6,7 +6,7 @@ use Moose;
 
 has host => ( isa => 'Str', is => 'ro', required => 1 );
 has port => ( isa => 'Int', is => 'ro', required => 1 );
-has owner => ( isa => 'Str', is => 'ro', required => 1 );
+has owner => ( isa => 'Maybe[Str]', is => 'ro', required => 1 );
 has template_id => ( isa => 'Maybe[Str]', is => 'ro', required => 1 );
 has superuser => ( isa => 'Str', is => 'ro', required => 1 );
 has schema => (isa => 'TestDbServer::Schema', is => 'ro', required => 1 );

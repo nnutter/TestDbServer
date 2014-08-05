@@ -9,9 +9,20 @@ use Moose;
 extends 'TestDbServer::Command::CreateDatabase';
 
 has '+template_id' => ( isa => 'Str', is => 'ro', required => 1 );
+has '+owner' => ( isa => 'Maybe[Str]', is => 'ro', required => 0 );
 has 'file_storage' => ( isa => 'TestDbServer::FileStorage', is => 'ro', required => 1 );
 
 no Moose;
+
+sub BUILDARGS {
+    my($class, %params) = @_;
+    # if no owner specified, get it from the template
+    unless ($params{owner}) {
+        my $template = $params{schema}->find_template($params{template_id});
+        $params{owner} = $template->owner if $template;
+    }
+    return \%params;
+}
 
 sub execute {
     my $self = shift;
@@ -32,7 +43,7 @@ sub execute {
                         name => $database->name,
                         host => $database->host,
                         port => $database->port,
-                        owner => $database->owner,
+                        owner => $self->owner || $database->owner,
                         superuser => $self->superuser,
                     );
 

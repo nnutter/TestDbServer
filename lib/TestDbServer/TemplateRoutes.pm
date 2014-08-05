@@ -35,7 +35,6 @@ sub get {
 sub save {
     my $self = shift;
 
-    my $id = $self->stash('id');
     if ($self->stash('based_on')) {
         $self->_save_based_on();
     } else {

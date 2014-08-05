@@ -76,4 +76,10 @@ sub _build_configuration {
     TestDbServer::Configuration->new_from_app_config($config);
 }
 
+sub host_and_port_for_created_database {
+    my $self = shift;
+    my $config = $self->configuration;
+    return ( $config->db_host, $config->db_port );
+}
+
 1;

@@ -16,7 +16,6 @@ no Moose;
 sub execute {
     my $self = shift;
 
-$DB::single=1;
     my $database = $self->SUPER::execute();
 
     my $template = $self->schema->find_template($self->template_id);

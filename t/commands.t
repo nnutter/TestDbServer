@@ -1,6 +1,7 @@
 use Mojo::Base -strict;
 
 use Test::More;
+use Test::Exception;
 use Mojo::Upload;
 use Mojo::Asset::Memory;
 
@@ -162,6 +163,8 @@ subtest 'create database' => sub {
 };
 
 subtest 'create database from template' => sub {
+    plan tests => 6;
+
     my $schema = new_schema();
 
     my $file_storage = new_file_storage();
@@ -179,7 +182,6 @@ subtest 'create database from template' => sub {
     my $cmd = TestDbServer::Command::CreateDatabaseFromTemplate->new(
                             host => pg_host(),
                             port => pg_port(),
-                            owner => pg_owner(),
                             superuser => pg_superuser(),
                             schema => $schema,
                             file_storage => $file_storage,
@@ -204,6 +206,28 @@ subtest 'create database from template' => sub {
                                 owner => $database->owner,
                         );
     ok($db_pg->dropdb, 'drop db');
+
+    throws_ok { TestDbServer::Command::CreateDatabaseFromTemplate->new(
+                    host => pg_host(),
+                    port => pg_port(),
+                    superuser => pg_superuser(),
+                    schema => $schema,
+                    file_storage => $file_storage)
+                }
+        'Exception::RequiredParamMissing',
+        'instantiation without owner and template_id fails';
+
+    throws_ok { TestDbServer::Command::CreateDatabaseFromTemplate->new(
+                    host => pg_host(),
+                    port => pg_port(),
+                    superuser => pg_superuser(),
+                    schema => $schema,
+                    file_storage => $file_storage,
+                    template_id => 'bogus'
+                  )->execute();
+               }
+        'Exception::TemplateNotFound',
+        'instantiate with bogus template_id';
 };
 
 sub new_upload {

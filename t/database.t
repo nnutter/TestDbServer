@@ -51,7 +51,7 @@ subtest 'get' => sub {
         ->json_is('/owner' => 'me')
         ->json_is('/template_id' => undef)
         ->json_has('/create_time')
-        ->json_has('expire_time');
+        ->json_has('/expire_time');
 
     $t->get_ok('/databases/garbage')
         ->status_is(404);

@@ -61,7 +61,7 @@ subtest 'get' => sub {
 };
 
 subtest 'create from template' => sub {
-    plan tests => 7;
+    plan tests => 9;
 
     my $template_file = File::Temp->new();
     $template_file->print('CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY)');
@@ -83,5 +83,7 @@ subtest 'create from template' => sub {
         ->json_has('/name')
         ->json_has('/expires');
 
+    $t->post_ok('/databases?based_on=bogus')
+        ->status_is(404, 'Cannot create DB based on bogus template_id');
 
 };

@@ -23,10 +23,20 @@ sub BUILDARGS {
     }
 
     unless ($params{owner}) {
-        my $template = $params{schema}->find_template($params{template_id});
+        my $template = _template_id_must_exist($params{schema}, $params{template_id});
         $params{owner} = $template->owner if $template;
     }
     return \%params;
+}
+
+sub _template_id_must_exist {
+    my($schema, $template_id) = @_;
+
+    my $template = $schema->find_template($template_id);
+    unless ($template) {
+        Exception::TemplateNotFound->throw(template_id => $template_id);
+    }
+    return $template;
 }
 
 sub execute {
@@ -34,10 +44,7 @@ sub execute {
 
     my $database = $self->SUPER::execute();
 
-    my $template = $self->schema->find_template($self->template_id);
-    unless ($template) {
-        Exception::TemplateNotFound->throw(template_id => $self->template_id);
-    }
+    my $template = _template_id_must_exist($self->schema, $self->template_id);
 
     my $pathname = $self->file_storage->path_for_name($template->file_path);
     unless ($pathname and -f $pathname) {

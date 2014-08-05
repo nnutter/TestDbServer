@@ -17,6 +17,11 @@ no Moose;
 sub BUILDARGS {
     my($class, %params) = @_;
     # if no owner specified, get it from the template
+    unless ($params{owner} || $params{template_id}) {
+        Exception::RequiredParamMissing->throw(error => 'owner or template_id is required',
+                                                params => ['owner','template_id']);
+    }
+
     unless ($params{owner}) {
         my $template = $params{schema}->find_template($params{template_id});
         $params{owner} = $template->owner if $template;

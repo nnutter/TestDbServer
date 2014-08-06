@@ -155,6 +155,7 @@ sub delete {
         if (ref($_) && $_->isa('Exception::TemplateNotFound') || $_->isa('Exception::CannotUnlinkFile')) {
             $return_code = 404;
         } else {
+            $self->app->log->error("_create_database_from_template: $_");
             die $_;
         }
     };

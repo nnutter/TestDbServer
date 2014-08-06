@@ -8,7 +8,7 @@ use DBI;
 
 use TestDbServer::Configuration;
 
-plan tests => 3;
+plan tests => 4;
 
 my $file_storage_path = File::Temp::tempdir( CLEANUP => 1);
 my $db = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
@@ -89,7 +89,23 @@ subtest 'create from template' => sub {
 
     $t->post_ok('/databases?based_on=bogus')
         ->status_is(404, 'Cannot create DB based on bogus template_id');
+};
 
+subtest 'create new' => sub {
+    plan tests => 7;
+
+    my $template_owner = 'genome';
+
+    my $test =
+        $t->post_ok("/databases?owner=$template_owner")
+            ->status_is(201)
+            ->json_has('/host')
+            ->json_has('/port')
+            ->json_has('/name')
+            ->json_has('/expires');
+
+    my $created_db_info = $test->tx->res->json;
+    ok(_connect_to_created_database($created_db_info), 'connect to created database');
 };
 
 sub _connect_to_created_database {

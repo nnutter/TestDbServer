@@ -36,9 +36,29 @@ sub create {
     if (my $template_id = $self->req->param('based_on')) {
         $self->_create_database_from_template($template_id);
 
+    } elsif (my $owner = $self->req->param('owner')) {
+        $self->_create_new_database($owner);
+
     } else {
         $self->render_not_found;
     }
+}
+
+sub _create_new_database {
+    my($self, $owner) = @_;
+
+    $self->_create_database_common(sub {
+            my($host, $port) = $self->app->host_and_port_for_created_database();
+            my $cmd = TestDbServer::Command::CreateDatabase->new(
+                            owner => $owner,
+                            template_id => undef,
+                            host => $host,
+                            port => $port,
+                            superuser => $self->app->configuration->db_user,
+                            file_storage => $self->app->file_storage,
+                            schema => $self->app->db_storage,
+                    );
+        });
 }
 
 sub _create_database_from_template {

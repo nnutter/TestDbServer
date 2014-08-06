@@ -8,7 +8,7 @@ use DBI;
 
 use TestDbServer::Configuration;
 
-plan tests => 4;
+plan tests => 6;
 
 my $file_storage_path = File::Temp::tempdir( CLEANUP => 1);
 my $db = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
@@ -106,6 +106,41 @@ subtest 'create new' => sub {
 
     my $created_db_info = $test->tx->res->json;
     ok(_connect_to_created_database($created_db_info), 'connect to created database');
+};
+
+subtest 'delete' => sub {
+    plan tests => 6;
+
+    my $template_owner = 'genome';
+    my $test = $t->post_ok("/databases?owner=$template_owner")
+            ->status_is(201);
+
+    my $id = $test->tx->res->json->{id};
+    $t->delete_ok("/databases/${id}")
+        ->status_is(204);
+
+
+    $t->delete_ok('/databases/bogus')
+        ->status_is(404);
+};
+
+subtest 'delete while connected' => sub {
+    plan tests => 7;
+
+    my $template_owner = 'genome';
+    my $test = $t->post_ok("/databases?owner=$template_owner")
+            ->status_is(201);
+
+    my $created_db_info = $test->tx->res->json;
+    my $id = $created_db_info->{id};
+    ok(my $dbh = _connect_to_created_database($created_db_info), 'connect to created database');
+
+    $t->delete_ok("/databases/${id}")
+        ->status_is(409);
+
+    $dbh->disconnect;
+    $t->delete_ok("/databases/${id}")
+        ->status_is(204);
 };
 
 sub _connect_to_created_database {

@@ -19,8 +19,9 @@ use TestDbServer::Command::CreateTemplateFromDatabase;
 use TestDbServer::Command::CreateDatabase;
 use TestDbServer::Command::CreateDatabaseFromTemplate;
 use TestDbServer::Command::DeleteTemplate;
+use TestDbServer::Command::DeleteDatabase;
 
-plan tests => 5;
+plan tests => 7;
 
 subtest 'save template file' => sub {
     plan tests => 5;
@@ -260,6 +261,68 @@ subtest 'delete template' => sub {
     ok($cmd, 'new');
     ok($cmd->execute(), 'execute');
     ok(! -f $fq_pathname, 'file was removed');
+};
+
+subtest 'delete database' => sub {
+    plan tests => 5;
+
+    my $schema = new_schema();
+
+    my $database = TestDbServer::Command::CreateDatabase->new(
+                            host => pg_host(),
+                            port => pg_port(),
+                            owner => pg_owner(),
+                            superuser => pg_superuser(),
+                            template_id => undef,
+                            schema => $schema,
+                    )->execute();
+    ok($database, 'Created database to delete');
+
+    my $cmd = TestDbServer::Command::DeleteDatabase->new(
+                            database_id => $database->database_id,
+                            schema => $schema);
+    ok($cmd, 'new delete database');
+    ok($cmd->execute(), 'execute delete database');
+
+
+    my $not_found_cmd = TestDbServer::Command::DeleteDatabase->new(
+                            database_id => 'bogus',
+                            schema => $schema);
+    ok($cmd, 'new delete not existant');
+    throws_ok { $cmd->execute() }
+        'Exception::DatabaseNotFound',
+        'Cannot delete unknown database';
+};
+
+subtest 'delete with connections' => sub {
+    plan tests => 5;
+
+    my $schema = new_schema();
+
+    my $database = TestDbServer::Command::CreateDatabase->new(
+                            host => pg_host(),
+                            port => pg_port(),
+                            owner => pg_owner(),
+                            superuser => pg_superuser(),
+                            template_id => undef,
+                            schema => $schema,
+                    )->execute();
+    ok($database, 'Create database');
+    my $dbh = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
+                                    $database->name, $database->host, $database->port),
+                            $database->owner,
+                            '');
+    ok($dbh, 'connect to created database');
+    my $cmd = TestDbServer::Command::DeleteDatabase->new(
+                                    database_id => $database->id,
+                                    schema => $schema);
+    ok($cmd, 'new');
+    throws_ok { $cmd->execute() }
+        'Exception::CannotDropDatabase',
+        'cannot execute - has connections';
+
+    $dbh->disconnect();
+    ok($cmd->execute(), 'delete after disconnecting');
 };
 
 sub new_upload {

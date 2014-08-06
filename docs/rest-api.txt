@@ -164,5 +164,6 @@ Delete a database
 
 Returns 204 if successful.
 Returns 404 if there is no database with that id.
+Returns 409 if that database has connections and cannot be deleted.
 
 ----------------------------------------------------------

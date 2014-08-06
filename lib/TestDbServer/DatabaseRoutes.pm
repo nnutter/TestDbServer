@@ -4,6 +4,7 @@ use Mojo::Base 'Mojolicious::Controller';
 use Try::Tiny;
 
 use TestDbServer::Command::CreateDatabaseFromTemplate;
+use TestDbServer::Command::DeleteDatabase;
 
 sub list {
     my $self = shift;
@@ -114,6 +115,36 @@ sub _create_database_common {
     } else {
         $self->rendered($return_code);
     }
+}
+
+sub delete {
+    my $self = shift;
+    my $id = $self->stash('id');
+
+    my $schema = $self->app->db_storage;
+    my $return_code;
+    try {
+        my $cmd = TestDbServer::Command::DeleteDatabase->new(
+                        database_id => $id,
+                        schema => $schema,
+                    );
+        $schema->txn_do(sub {
+            $cmd->execute();
+            $return_code = 204;
+        });
+    }
+    catch {
+        if (ref($_) && $_->isa('Exception::DatabaseNotFound')) {
+            $return_code = 404;
+        } elsif (ref($_) && $_->isa('Exception::CannotDropDatabase')) {
+            $return_code = 409;
+        } else {
+            $self->app->log->error("delete database: $_");
+            die $_;
+        }
+    };
+
+    $self->rendered($return_code);
 }
 
 1;

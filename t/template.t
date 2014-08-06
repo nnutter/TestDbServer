@@ -14,7 +14,10 @@ my $db = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sql
 my $connect_string = 'dbi:SQLite:' . $db->filename;
 my $config = TestDbServer::Configuration->new(
                     file_storage_path => $file_storage_path,
-                    db_connect_string => $connect_string
+                    db_connect_string => $connect_string,
+                    db_user => 'postgres',
+                    db_host => 'localhost',
+                    db_port => 5434,
                 );
 
 my $t = Test::Mojo->new('TestDbServer');
@@ -150,26 +153,39 @@ subtest 'upload duplicate' => sub {
 };
 
 subtest 'based on database' => sub {
-    TODO: {
-        local $TODO = 'creating template based on database not implemented yet';
+    plan tests => 16;
 
-        my $create_database =
-            $t->post_ok('/databases')
-                ->status_is(201)
-                ->json_has('/id')
-                ->json_has('/host')
-                ->json_has('/port')
-                ->json_has('/user')
-                ->json_has('/password')
-                ->json_has('/expires');
+    my $template_owner = 'genome';
 
-        my $body = $create_database->tx->res->body;
-        my $database_details = Mojo::JSON::decode_json($body) if $create_database->tx->res->is_status_class(200);
-        my $database_id = $database_details->{id};
-
-        $t->post_ok("/templates?based_on=$database_id")
+    my $create_database =
+        $t->post_ok("/databases?owner=$template_owner")
             ->status_is(201)
-    }
+            ->json_has('/id');
+
+    my $database_details = $create_database->tx->res->json;
+    my $database_id = $database_details->{id};
+
+    my $template_name = "test_template_$$";
+    my $creation = $t->post_ok("/templates?based_on=${database_id}&name=${template_name}")
+        ->status_is(201)
+        ->header_like('Location' => qr(/templates/\w+), 'Location header');
+
+    # Try getting the thing at the Location header
+    $t->get_ok($creation->tx->res->headers->location)
+        ->status_is(200)
+        ->json_is('/name', $template_name)
+        ->json_is('/owner', $template_owner);
+
+
+
+    $t->post_ok("/templates?based_on=$database_id")  # missing name param
+        ->status_is(400);
+
+    $t->post_ok("/templates?based_on=bogus&name=qwerty")  # bogus database id
+        ->status_is(404);
+
+    $t->post_ok("/templates?based_on=$database_id&name=${template_name}") # same as first
+        ->status_is(409);
 };
 
 my @files_for_template;

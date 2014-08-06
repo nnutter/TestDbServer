@@ -6,6 +6,7 @@ use File::Basename;
 
 use TestDbServer::Command::SaveTemplateFile;
 use TestDbServer::Command::DeleteTemplate;
+use TestDbServer::Command::CreateTemplateFromDatabase;
 
 sub list {
     my $self = shift;
@@ -36,8 +37,9 @@ sub get {
 sub save {
     my $self = shift;
 
-    if ($self->stash('based_on')) {
+    if ($self->req->param('based_on')) {
         $self->_save_based_on();
+
     } else {
         $self->_save_file();
     }
@@ -86,6 +88,49 @@ sub _save_file {
 sub _save_based_on {
     my $self = shift;
 
+    my $schema = $self->app->db_storage;
+    my ($template_id, $return_code);
+    try {
+        unless ($self->param('name')) {
+            Exception::RequiredParamMissing->throw(params => ['name']);
+        }
+
+        my $cmd = TestDbServer::Command::CreateTemplateFromDatabase->new(
+                        name => $self->param('name') || undef,
+                        note => $self->param('note') || undef,
+                        database_id => $self->param('based_on') || undef,
+                        schema => $schema,
+                        file_storage => $self->app->file_storage,
+                    );
+        $schema->txn_do(sub {
+            $template_id = $cmd->execute();
+            $return_code = 201;
+        });
+    }
+    catch {
+        if (ref($_) && $_->isa('Exception::RequiredParamMissing')) {
+            $return_code = 400;
+
+        } elsif (ref($_) && $_->isa('Exception::DatabaseNotFound')) {
+            $return_code = 404;
+
+        } elsif (ref($_) && $_->isa('DBIx::Class::Exception') && m/UNIQUE constraint failed: db_template\.name/) {
+            $return_code = 409;
+
+        } else {
+            $self->app->log->error("create template based on: $_");
+            die $_;
+        }
+
+    };
+
+    if ($template_id) {
+        my $url = $self->req->url;
+        my $base_url = join('', $url->base, $url->path);
+        my $response_location = join('/', $base_url, $template_id);
+        $self->res->headers->location($response_location);
+    }
+    $self->rendered($return_code);
 }
 
 sub delete {

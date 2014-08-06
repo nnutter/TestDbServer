@@ -48,7 +48,7 @@ sub execute {
 
     my $pathname = $self->file_storage->path_for_name($template->file_path);
     unless ($pathname and -f $pathname) {
-        Exception::CannotOpenFile->throw(path => $pathname);
+        Exception::CannotOpenFile->throw(path => $pathname, error => 'Not found or Not a file');
     }
 
     my $pg = TestDbServer::PostgresInstance->new(

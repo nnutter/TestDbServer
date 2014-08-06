@@ -18,7 +18,7 @@ use FakeApp;
 
 use TestDbServer::FileStorage;
 
-plan tests => 3;
+plan tests => 4;
 
 subtest 'create' => sub {
     plan tests => 6;
@@ -97,6 +97,26 @@ subtest 'open file' => sub {
     throws_ok { $store->open_file('garbage') }
         'Exception::CannotOpenFile',
         'Cannot open non-existant file';
+};
+
+subtest 'unlink' => sub {
+    plan tests => 3;
+
+    my $fake_app = FakeApp->new();
+    my $base_dir = File::Temp::tempdir( CLEANUP => 1 );
+
+    my $store = TestDbServer::FileStorage->new(base_path => $base_dir, app => $fake_app);
+
+    my $fh = File::Temp->new();
+    $fh->print("stuff\n");
+    $fh->close();
+
+    ok(my $filename = $store->save($fh->filename), 'save file');
+    ok($store->unlink($filename), 'unlink');
+
+    throws_ok { $store->unlink('bogus') }
+        'Exception::CannotUnlinkFile',
+        'cannot unlink bogus file';
 };
 
 sub new_upload {

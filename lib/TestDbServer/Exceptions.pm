@@ -27,6 +27,11 @@ use Exception::Class (
         fields => ['path'],
     },
 
+    Exception::CannotUnlinkFile => {
+        isa => 'Exception::BaseException',
+        fields => ['path'],
+    },
+
     Exception::ShellCommandFailed => {
         isa => 'Exception::BaseException',
         fields => [qw(exit_code signal core_dump output)],

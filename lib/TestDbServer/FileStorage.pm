@@ -77,5 +77,14 @@ sub open_file {
     return $fh;
 }
 
+sub unlink {
+    my($self, $pathname) = @_;
+
+    my $stored_filename = $self->path_for_name($pathname);
+    unless (unlink $stored_filename) {
+        Exception::CannotUnlinkFile->throw(error => $!, path => $stored_filename);
+    }
+    return 1;
+}
 
 1;

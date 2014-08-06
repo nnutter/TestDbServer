@@ -31,8 +31,9 @@ subtest 'list' => sub {
 
     
     my $db = $app->db_storage;
-    @templates = (  $db->create_template(name => 'foo', owner => 'bubba', file_path => 'bar'),
-                    $db->create_template(name => 'baz', owner => 'bubba', file_path => 'quux')
+    my $file_store = $app->file_storage;
+    @templates = (  $db->create_template(name => 'foo', owner => 'bubba', file_path => make_file_for_template($file_store)),
+                    $db->create_template(name => 'baz', owner => 'bubba', file_path => make_file_for_template($file_store)),
                 );
 
     my $expected_data = [ $templates[0]->template_id, $templates[1]->template_id ];
@@ -48,7 +49,7 @@ subtest 'get' => sub {
         ->status_is(200)
         ->json_is('/template_id' => $templates[0]->template_id)
         ->json_is('/name' => 'foo')
-        ->json_is('/file_path' => 'bar')
+        ->json_is('/file_path' => $templates[0]->file_path)
         ->json_is('/note' => undef)
         ->json_has('/create_time')
         ->json_has('/last_used_time');
@@ -170,3 +171,16 @@ subtest 'based on database' => sub {
             ->status_is(201)
     }
 };
+
+my @files_for_template;
+sub make_file_for_template {
+    my $file_storage = shift;
+
+    my $fh = File::Temp->new();
+    $fh->print("hi\n");
+    $fh->close();
+
+    push @files_for_template, $fh;
+    my $name = $file_storage->save($fh->filename);
+    return $name;
+}

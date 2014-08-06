@@ -5,6 +5,7 @@ use Try::Tiny;
 use File::Basename;
 
 use TestDbServer::Command::SaveTemplateFile;
+use TestDbServer::Command::DeleteTemplate;
 
 sub list {
     my $self = shift;
@@ -95,13 +96,22 @@ sub delete {
 
     my $return_code;
     try {
+        my $cmd = TestDbServer::Command::DeleteTemplate->new(
+                    template_id => $id,
+                    schema => $schema,
+                    file_storage => $self->app->file_storage,
+                );
         $schema->txn_do(sub {
-            $schema->delete_template($id);
+            $cmd->execute();
             $return_code = 204;
         });
     }
     catch {
-        $return_code = 404;
+        if (ref($_) && $_->isa('Exception::TemplateNotFound') || $_->isa('Exception::CannotUnlinkFile')) {
+            $return_code = 404;
+        } else {
+            die $_;
+        }
     };
 
     $self->rendered($return_code);

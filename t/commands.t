@@ -18,8 +18,9 @@ use TestDbServer::Command::SaveTemplateFile;
 use TestDbServer::Command::CreateTemplateFromDatabase;
 use TestDbServer::Command::CreateDatabase;
 use TestDbServer::Command::CreateDatabaseFromTemplate;
+use TestDbServer::Command::DeleteTemplate;
 
-plan tests => 4;
+plan tests => 5;
 
 subtest 'save template file' => sub {
     plan tests => 5;
@@ -228,6 +229,37 @@ subtest 'create database from template' => sub {
                }
         'Exception::TemplateNotFound',
         'instantiate with bogus template_id';
+};
+
+subtest 'delete template' => sub {
+    plan tests => 5;
+
+    my $upload = new_upload( my $file_name = File::Temp::tmpnam(),
+                             my $file_contents = "This is the test contents\n");
+
+    my $file_storage = new_file_storage();
+    my $schema = new_schema();
+
+    ok(my $template_id = TestDbServer::Command::SaveTemplateFile->new(
+                name => $file_name,
+                owner => 'bob',
+                note => 'test note',
+                upload => $upload,
+                schema => $schema,
+                file_storage => $file_storage,
+            )->execute(),
+        'Create file to unlink');
+    my $short_name = File::Basename::basename($file_name);
+    my $fq_pathname = $file_storage->path_for_name($short_name);
+    ok(-f $fq_pathname, 'file exists in store');
+
+    my $cmd = TestDbServer::Command::DeleteTemplate->new(
+                template_id => $template_id,
+                schema => $schema,
+                file_storage => $file_storage);
+    ok($cmd, 'new');
+    ok($cmd->execute(), 'execute');
+    ok(! -f $fq_pathname, 'file was removed');
 };
 
 sub new_upload {

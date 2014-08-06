@@ -4,6 +4,7 @@ use Test::More;
 use Test::Mojo;
 use Mojo::JSON;
 use File::Temp;
+use DBI;
 
 use TestDbServer::Configuration;
 
@@ -61,7 +62,7 @@ subtest 'get' => sub {
 };
 
 subtest 'create from template' => sub {
-    plan tests => 9;
+    plan tests => 10;
 
     my $template_file = File::Temp->new();
     $template_file->print('CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY)');
@@ -74,16 +75,30 @@ subtest 'create from template' => sub {
                                         file_path => $template_file_path,
                                         owner => $template_owner,
                                     );
-    my $resp =
+    my $test =
         $t->post_ok('/databases?based_on=' . $template->template_id)
-        ->status_is(201)
-        ->json_is('/owner' => $template_owner)
-        ->json_has('/host')
-        ->json_has('/port')
-        ->json_has('/name')
-        ->json_has('/expires');
+            ->status_is(201)
+            ->json_is('/owner' => $template_owner)
+            ->json_has('/host')
+            ->json_has('/port')
+            ->json_has('/name')
+            ->json_has('/expires');
+
+    my $created_db_info = $test->tx->res->json;
+    ok(_connect_to_created_database($created_db_info), 'connect to created database');
 
     $t->post_ok('/databases?based_on=bogus')
         ->status_is(404, 'Cannot create DB based on bogus template_id');
 
 };
+
+sub _connect_to_created_database {
+    my $created_db_info = shift;
+
+    my $dbh = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
+                                    @$created_db_info{'name','host','port'}),
+                            $created_db_info->{owner},
+                            '');
+    return $dbh;
+}
+

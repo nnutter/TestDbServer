@@ -44,21 +44,28 @@ sub create {
 sub _create_database_from_template {
     my($self, $template_id) = @_;
 
-    my $schema = $self->app->db_storage;
-
-    my($database, $return_code);
-    try {
-        $schema->txn_do(sub {
+    $self->_create_database_common(sub {
             my($host, $port) = $self->app->host_and_port_for_created_database();
-
-            my $cmd = TestDbServer::Command::CreateDatabaseFromTemplate->new(
+            TestDbServer::Command::CreateDatabaseFromTemplate->new(
                             template_id => $template_id,
                             host => $host,
                             port => $port,
                             superuser => $self->app->configuration->db_user,
                             file_storage => $self->app->file_storage,
-                            schema => $schema,
+                            schema => $self->app->db_storage,
                     );
+        });
+}
+
+sub _create_database_common {
+    my($self, $cmd_creator_sub) = @_;
+
+    my $schema = $self->app->db_storage;
+
+    my($database, $return_code);
+    try {
+        $schema->txn_do(sub {
+            my $cmd = $cmd_creator_sub->();
             $database = $cmd->execute();
         });
     }

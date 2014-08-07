@@ -4,6 +4,7 @@ use Mojo::Base 'Mojolicious::Controller';
 use Try::Tiny;
 use File::Basename;
 
+use TestDbServer::Utils;
 use TestDbServer::Command::SaveTemplateFile;
 use TestDbServer::Command::DeleteTemplate;
 use TestDbServer::Command::CreateTemplateFromDatabase;
@@ -78,7 +79,7 @@ sub _save_file {
     };
 
     if ($template_id) {
-        my $response_location = join('/', $self->req->url, $template_id);
+        my $response_location = TestDbServer::Utils::id_url_for_request_and_entity_id($self->req, $template_id);
         $self->res->headers->location($response_location);
     }
 
@@ -125,9 +126,7 @@ sub _save_based_on {
     };
 
     if ($template_id) {
-        my $url = $self->req->url;
-        my $base_url = join('', $url->base, $url->path);
-        my $response_location = join('/', $base_url, $template_id);
+        my $response_location = TestDbServer::Utils::id_url_for_request_and_entity_id($self->req, $template_id);
         $self->res->headers->location($response_location);
     }
     $self->rendered($return_code);

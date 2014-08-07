@@ -3,6 +3,7 @@ use Mojo::Base 'Mojolicious::Controller';
 
 use Try::Tiny;
 
+use TestDbServer::Utils;
 use TestDbServer::Command::CreateDatabaseFromTemplate;
 use TestDbServer::Command::DeleteDatabase;
 
@@ -103,7 +104,7 @@ sub _create_database_common {
     };
 
     if ($database) {
-        my $response_location = join('/', $self->req->url, $database->database_id);
+        my $response_location = TestDbServer::Utils::id_url_for_request_and_entity_id($self->req, $database->database_id);
         $self->res->headers->location($response_location);
 
         my %resp;

@@ -140,7 +140,7 @@ subtest 'upload duplicate' => sub {
                         file => { file => $upload_file->filename }
                     },
                 )
-            ->status_is(403, 'Upload with duplicate file path returns 403');
+            ->status_is(409, 'Upload with duplicate file path returns 409');
 
     $t->post_ok('/templates' =>
                     form => {
@@ -149,7 +149,7 @@ subtest 'upload duplicate' => sub {
                         file => { file => __FILE__ }
                     },
                 )
-            ->status_is(403, 'Upload with duplicate name returns 403');
+            ->status_is(409, 'Upload with duplicate name returns 409');
 };
 
 subtest 'based on database' => sub {

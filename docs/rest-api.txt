@@ -55,7 +55,7 @@ note: String - human readable info about this template (optional)
 file: file upload (required)
 
 Returns 201 if successful, and the URL of the new uploaded thing in the Location header
-Returns 403 if there is already a template with that name or file name
+Returns 409 if there is already a template with that name or file name
 
 -------------------------------------------------------
 

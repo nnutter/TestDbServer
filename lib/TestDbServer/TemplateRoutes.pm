@@ -70,7 +70,7 @@ sub _save_file {
             ||
             (ref($_) && $_->isa('DBIx::Class::Exception') && $_ =~ m/UNIQUE constraint failed/i)
         ) {
-            $return_code = 403;
+            $return_code = 409;
         } else {
             $self->app->log->error("save_file: $_");
             $return_code = 500;

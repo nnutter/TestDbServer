@@ -120,6 +120,7 @@ Returns 201 and JSON in the body
     owner: String - Owner for this DB
     expires: Integer - Unix time when this database will be automatically deleted
 }
+The Location header will be the URL for this entity
 
 -----------------------------------------------------
 
@@ -136,6 +137,7 @@ Returns 201 and JSON in the body
     owner: String - Owner for this DB
     expires: Integer - Unix time when this database will be automatically deleted
 }
+The Location header will be the URL for this entity
 
 Returns 404 if there is no template with that id
 

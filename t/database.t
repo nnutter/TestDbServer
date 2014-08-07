@@ -62,7 +62,7 @@ subtest 'get' => sub {
 };
 
 subtest 'create from template' => sub {
-    plan tests => 10;
+    plan tests => 12;
 
     my $template_file = File::Temp->new();
     $template_file->print('CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY)');
@@ -79,10 +79,13 @@ subtest 'create from template' => sub {
         $t->post_ok('/databases?based_on=' . $template->template_id)
             ->status_is(201)
             ->json_is('/owner' => $template_owner)
+            ->json_has('/id')
             ->json_has('/host')
             ->json_has('/port')
             ->json_has('/name')
             ->json_has('/expires');
+
+    _validate_location_header($test);
 
     my $created_db_info = $test->tx->res->json;
     ok(_connect_to_created_database($created_db_info), 'connect to created database');
@@ -91,18 +94,33 @@ subtest 'create from template' => sub {
         ->status_is(404, 'Cannot create DB based on bogus template_id');
 };
 
+sub _validate_location_header {
+    my $test = shift;
+    subtest 'validate location header' => sub {
+        plan tests => 3;
+        my $db_id = $test->tx->res->json->{id};
+        $test->header_like('Location' => qr(/databases/$db_id), 'Location header');
+        my $location = $test->tx->res->headers->location;
+        $t->get_ok($location)
+            ->status_is(200, 'Get created database info');
+    };
+}
+
 subtest 'create new' => sub {
-    plan tests => 7;
+    plan tests => 9;
 
     my $template_owner = 'genome';
 
     my $test =
         $t->post_ok("/databases?owner=$template_owner")
             ->status_is(201)
+            ->json_has('/id')
             ->json_has('/host')
             ->json_has('/port')
             ->json_has('/name')
             ->json_has('/expires');
+
+    _validate_location_header($test);
 
     my $created_db_info = $test->tx->res->json;
     ok(_connect_to_created_database($created_db_info), 'connect to created database');

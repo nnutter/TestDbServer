@@ -8,7 +8,7 @@ use DBI;
 
 use TestDbServer::Configuration;
 
-plan tests => 6;
+plan tests => 7;
 
 my $file_storage_path = File::Temp::tempdir( CLEANUP => 1);
 my $db = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
@@ -160,6 +160,41 @@ subtest 'delete while connected' => sub {
     $t->delete_ok("/databases/${id}")
         ->status_is(204);
 };
+
+subtest 'update expire time' => sub {
+   plan tests => 15;
+
+    my $template_owner = 'genome';
+
+    my $test =
+        $t->post_ok("/databases?owner=$template_owner")
+            ->status_is(201)
+            ->json_has('/expires');
+
+    my $created_db_info = $test->tx->res->json;
+    ok(_connect_to_created_database($created_db_info), 'connect to created database');
+
+
+    my $db_url = $test->tx->res->headers->location;
+    my $expire_ttl = 3;
+    $test =
+        $t->patch_ok("${db_url}?ttl=${expire_ttl}")
+            ->status_is(200)
+            ->json_has('/id')
+            ->json_has('/host')
+            ->json_has('/port')
+            ->json_has('/name')
+            ->json_has('/expires');
+    ok(_connect_to_created_database($created_db_info), 'connect immediately after patching ttl');
+
+    diag('waiting to expire...');
+    sleep($expire_ttl * 2);
+
+    $t->get_ok($db_url)
+        ->status_is(404, 'database record has expired');
+    ok(! _connect_to_created_database($created_db_info), 'Cannot connect to expired database');
+};
+
 
 sub _connect_to_created_database {
     my $created_db_info = shift;

@@ -25,11 +25,19 @@ sub get {
     my $schema = $self->app->db_storage();
     my $database = $schema->find_database($id);
     if ($database) {
-        my %database = map { $_ => $database->$_ } qw( database_id host port name owner create_time expire_time template_id );
-        $self->render(json => \%database);
+        $self->render(json => _hashref_for_database_obj($database));
     } else {
         $self->render_not_found;
     }
+}
+
+sub _hashref_for_database_obj {
+    my $database = shift;
+
+    my %h;
+    @h{'id','host','port','name','owner','created','expires','template_id'}
+        = map { $database->$_ } qw( database_id host port name owner create_time expire_time template_id );
+    return \%h;
 }
 
 sub create {
@@ -107,11 +115,7 @@ sub _create_database_common {
         my $response_location = TestDbServer::Utils::id_url_for_request_and_entity_id($self->req, $database->database_id);
         $self->res->headers->location($response_location);
 
-        my %resp;
-        @resp{'id','host','port','name','owner','expires'}
-            = map { $database->$_ } qw(database_id host port name owner expire_time);
-
-        $self->render(json => \%resp, status => 201);
+        $self->render(status => 201, json => _hashref_for_database_obj($database));
 
     } else {
         $self->rendered($return_code);

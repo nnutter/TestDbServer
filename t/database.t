@@ -48,14 +48,14 @@ subtest 'get' => sub {
 
     $t->get_ok('/databases/'.$databases[0]->database_id)
         ->status_is(200)
-        ->json_is('/database_id' => $databases[0]->database_id)
+        ->json_is('/id' => $databases[0]->database_id)
         ->json_is('/host' => 'foo')
         ->json_is('/port' => '123' )
         ->json_is('/name' => 'qwerty')
         ->json_is('/owner' => 'me')
         ->json_is('/template_id' => undef)
-        ->json_has('/create_time')
-        ->json_has('/expire_time');
+        ->json_has('/created')
+        ->json_has('/expires');
 
     $t->get_ok('/databases/garbage')
         ->status_is(404);

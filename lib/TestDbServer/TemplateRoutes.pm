@@ -28,7 +28,7 @@ sub get {
 
     my $template = $schema->find_template($id);
     if ($template) {
-        my %template = map { $_ => $template->$_ } qw(template_id name owner note file_path create_time last_used_time);
+        my %template = map { $_ => $template->$_ } qw(template_id name owner note sql_script create_time last_used_time);
         $self->render(json => \%template);
     } else {
         $self->render_not_found;
@@ -58,7 +58,6 @@ sub _save_file {
                 note => $self->param('note') || undef,
                 upload => $self->req->upload('file'),
                 schema => $schema,
-                file_storage => $self->app->file_storage,
             );
 
         $schema->txn_do(sub {
@@ -101,7 +100,6 @@ sub _save_based_on {
                         note => $self->param('note') || undef,
                         database_id => $self->param('based_on') || undef,
                         schema => $schema,
-                        file_storage => $self->app->file_storage,
                     );
         $schema->txn_do(sub {
             $template_id = $cmd->execute();
@@ -143,7 +141,6 @@ sub delete {
         my $cmd = TestDbServer::Command::DeleteTemplate->new(
                     template_id => $id,
                     schema => $schema,
-                    file_storage => $self->app->file_storage,
                 );
         $schema->txn_do(sub {
             $cmd->execute();

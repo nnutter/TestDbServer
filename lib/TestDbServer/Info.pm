@@ -13,7 +13,6 @@ sub root {
         {
             template_count => $templates->count,
             database_count => $databases->count,
-            file_path      => $self->app->configuration->file_storage_path,
         }
     );
 }

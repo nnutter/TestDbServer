@@ -9,11 +9,9 @@ use File::Temp;
 use TestDbServer::Configuration;
 plan tests => 6;
 
-my $file_storage_path = File::Temp::tempdir( CLEANUP => 1);
 my $db = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
 my $connect_string = 'dbi:SQLite:' . $db->filename;
 my $config = TestDbServer::Configuration->new(
-                    file_storage_path => $file_storage_path,
                     db_connect_string => $connect_string,
                     db_user => 'postgres',
                     db_host => 'localhost',
@@ -34,9 +32,8 @@ subtest 'list' => sub {
 
     
     my $db = $app->db_storage;
-    my $file_store = $app->file_storage;
-    @templates = (  $db->create_template(name => 'foo', owner => 'bubba', file_path => make_file_for_template($file_store)),
-                    $db->create_template(name => 'baz', owner => 'bubba', file_path => make_file_for_template($file_store)),
+    @templates = (  $db->create_template(name => 'foo', owner => 'bubba', sql_script => 'script 1'),
+                    $db->create_template(name => 'baz', owner => 'bubba', sql_script => 'script 2'),
                 );
 
     my $expected_data = [ $templates[0]->template_id, $templates[1]->template_id ];
@@ -52,7 +49,7 @@ subtest 'get' => sub {
         ->status_is(200)
         ->json_is('/template_id' => $templates[0]->template_id)
         ->json_is('/name' => 'foo')
-        ->json_is('/file_path' => $templates[0]->file_path)
+        ->json_is('/sql_script' => $templates[0]->sql_script)
         ->json_is('/note' => undef)
         ->json_has('/create_time')
         ->json_has('/last_used_time');
@@ -76,7 +73,7 @@ subtest 'delete' => sub {
 };
 
 subtest 'upload file' => sub {
-    plan tests => 11;
+    plan tests => 9;
 
     my $upload_file_contents = "This is test content\n";
     my $upload_file = File::Temp->new();
@@ -104,18 +101,11 @@ subtest 'upload file' => sub {
         ->json_is('/name' => $template_name)
         ->json_is('/owner' => $template_owner)
         ->json_is('/note' => $template_note)
-        ->json_is('/file_path', File::Basename::basename($upload_file_name));
-
-    ok(-f $app->file_storage->path_for_name($upload_file_name),
-        'Uploaded file exists');
-
-    is(join('', $app->file_storage->open_file($upload_file_name)->getlines()),
-        $upload_file_contents,
-        'Upload file contents');
+        ->json_is('/sql_script', $upload_file_contents);
 };
 
 subtest 'upload duplicate' => sub {
-    plan tests => 6;
+    plan tests => 4;
 
     my $upload_file = File::Temp->new();
     $upload_file->print("This is test content\n");
@@ -132,15 +122,6 @@ subtest 'upload duplicate' => sub {
                     },
                 )
             ->status_is(201);
-
-    $t->post_ok('/templates' =>
-                    form => {
-                        name => $template_name . 'and more',
-                        owner => $template_owner,
-                        file => { file => $upload_file->filename }
-                    },
-                )
-            ->status_is(409, 'Upload with duplicate file path returns 409');
 
     $t->post_ok('/templates' =>
                     form => {
@@ -188,15 +169,3 @@ subtest 'based on database' => sub {
         ->status_is(409);
 };
 
-my @files_for_template;
-sub make_file_for_template {
-    my $file_storage = shift;
-
-    my $fh = File::Temp->new();
-    $fh->print("hi\n");
-    $fh->close();
-
-    push @files_for_template, $fh;
-    my $name = $file_storage->save($fh->filename);
-    return $name;
-}

@@ -1,5 +1,4 @@
 use TestDbServer::Schema;
-use TestDbServer::FileStorage;
 use TestDbServer::Configuration;
 
 package TestDbServer;
@@ -11,11 +10,6 @@ extends 'Mojolicious';
 has db_storage => (
     is => 'ro',
     isa => 'TestDbServer::Schema',
-    lazy_build => 1,
-);
-has file_storage => (
-    is => 'ro',
-    isa => 'TestDbServer::FileStorage',
     lazy_build => 1,
 );
 has configuration => (
@@ -61,13 +55,6 @@ sub _build_db_storage {
             $self->configuration->db_user,
             $self->configuration->db_password,
         );
-}
-
-sub _build_file_storage {
-    my $self = shift;
-
-    my $base_path = $self->configuration->file_storage_path;
-    TestDbServer::FileStorage->new(base_path => $base_path, app => $self);
 }
 
 sub _build_configuration {

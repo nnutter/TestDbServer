@@ -92,7 +92,6 @@ sub _create_new_database {
                             host => $host,
                             port => $port,
                             superuser => $self->app->configuration->db_user,
-                            file_storage => $self->app->file_storage,
                             schema => $self->app->db_storage,
                     );
         });
@@ -108,7 +107,6 @@ sub _create_database_from_template {
                             host => $host,
                             port => $port,
                             superuser => $self->app->configuration->db_user,
-                            file_storage => $self->app->file_storage,
                             schema => $self->app->db_storage,
                     );
         });

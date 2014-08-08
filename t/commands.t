@@ -7,7 +7,6 @@ use Mojo::Asset::Memory;
 
 use File::Temp;
 
-use TestDbServer::FileStorage;
 use TestDbServer::Schema;
 use TestDbServer::PostgresInstance;
 use lib 't/lib';
@@ -24,12 +23,11 @@ use TestDbServer::Command::DeleteDatabase;
 plan tests => 7;
 
 subtest 'save template file' => sub {
-    plan tests => 5;
+    plan tests => 4;
 
     my $upload = new_upload( my $file_name = File::Temp::tmpnam(),
                              my $file_contents = "This is the test contents\n");
 
-    my $file_storage = new_file_storage();
     my $schema = new_schema();
 
     my $command = TestDbServer::Command::SaveTemplateFile->new(
@@ -38,26 +36,18 @@ subtest 'save template file' => sub {
                         note => 'test note',
                         upload => $upload,
                         schema => $schema,
-                        file_storage => $file_storage,
                     );
     ok($command, 'new');
     ok(my $template_id = $command->execute(), 'execute');
 
     my $template = $schema->find_template($template_id);
     ok($template, 'get created template');
-    my $template_file_path = $file_storage->path_for_name($template->file_path);
-    ok(-f $template_file_path, 'Uploaded file exists');
 
-    do {
-        local $/;
-        open(my $fh, '<', $template_file_path);
-        my $content = <$fh>;
-        is($content, $file_contents, 'File contents');
-    };
+    is($template->sql_script, $file_contents, 'SQL script');
 };
 
 subtest 'create template from database' => sub {
-    plan tests => 6;
+    plan tests => 5;
 
     my $app = FakeApp->new();
     my $pg = new_pg_instance();
@@ -66,7 +56,7 @@ subtest 'create template from database' => sub {
     my $base_template_name = File::Temp::tmpnam();
 
     my $base_template = $schema->create_template(name => $base_template_name,
-                                                 file_path => '/dev/null',
+                                                 sql_script => '',
                                                  owner => $base_template_name );
     my $database = $schema->create_database(template_id => $base_template->template_id,
                                             map { $_ => $pg->$_ } qw( host port name owner ) );
@@ -81,14 +71,12 @@ subtest 'create template from database' => sub {
 
     my $new_template_name = File::Temp::tmpnam();
     my $tmpdir = File::Temp::tempdir();
-    my $file_storage = TestDbServer::FileStorage->new(base_path => $tmpdir, app => $app);
 
     my $cmd = TestDbServer::Command::CreateTemplateFromDatabase->new(
                     name => $new_template_name,
                     note => 'new template from database',
                     database_id => $database->database_id,
                     schema => $schema,
-                    file_storage => $file_storage,
                 );
     ok($cmd, 'new');
     my $template_id = $cmd->execute();
@@ -96,15 +84,8 @@ subtest 'create template from database' => sub {
 
     my $template = $schema->find_template($template_id);
     ok($template, 'get created template');
-    my $template_file_path = join('/', $tmpdir, $template->file_path);
-    ok(-f $template_file_path, 'Uploaded file exists');
 
-    do {
-        local $/;
-        open(my $fh, '<', $template_file_path);
-        my $content = <$fh>;
-        like($content, qr(CREATE TABLE $table_name), 'File contents');
-    };
+    like($template->sql_script, qr(CREATE TABLE $table_name), 'Template sql script');
 
     $dbi->disconnect;
     $pg->dropdb;
@@ -141,7 +122,7 @@ subtest 'create database' => sub {
     my $template = $schema->create_template(
                                 name => 'foo',
                                 owner => pg_owner(),
-                                file_path => '/dev/null',
+                                sql_script => '',
                             );
     my $create_db_cmd = TestDbServer::Command::CreateDatabase->new(
                                 host => pg_host(),
@@ -169,16 +150,12 @@ subtest 'create database from template' => sub {
 
     my $schema = new_schema();
 
-    my $file_storage = new_file_storage();
-    my $upload_name = 'wlkjwerl';
-    my $upload = new_upload( $upload_name,
-                             'CREATE TABLE foo(foo_id integer NOT NULL PRIMARY KEY)' );
-    $file_storage->save_upload($upload);
+    my $sql_script = 'CREATE TABLE foo(foo_id integer NOT NULL PRIMARY KEY)';
 
     my $template = $schema->create_template(
                                 name => 'foo',
                                 owner => pg_owner(),
-                                file_path => $upload_name,
+                                sql_script => $sql_script,
                             );
 
     my $cmd = TestDbServer::Command::CreateDatabaseFromTemplate->new(
@@ -186,7 +163,6 @@ subtest 'create database from template' => sub {
                             port => pg_port(),
                             superuser => pg_superuser(),
                             schema => $schema,
-                            file_storage => $file_storage,
                             template_id => $template->template_id,
                         );
     ok($cmd, 'new');
@@ -213,8 +189,7 @@ subtest 'create database from template' => sub {
                     host => pg_host(),
                     port => pg_port(),
                     superuser => pg_superuser(),
-                    schema => $schema,
-                    file_storage => $file_storage)
+                    schema => $schema);
                 }
         'Exception::RequiredParamMissing',
         'instantiation without owner and template_id fails';
@@ -224,7 +199,6 @@ subtest 'create database from template' => sub {
                     port => pg_port(),
                     superuser => pg_superuser(),
                     schema => $schema,
-                    file_storage => $file_storage,
                     template_id => 'bogus'
                   )->execute();
                }
@@ -233,12 +207,11 @@ subtest 'create database from template' => sub {
 };
 
 subtest 'delete template' => sub {
-    plan tests => 5;
+    plan tests => 4;
 
     my $upload = new_upload( my $file_name = File::Temp::tmpnam(),
                              my $file_contents = "This is the test contents\n");
 
-    my $file_storage = new_file_storage();
     my $schema = new_schema();
 
     ok(my $template_id = TestDbServer::Command::SaveTemplateFile->new(
@@ -247,20 +220,18 @@ subtest 'delete template' => sub {
                 note => 'test note',
                 upload => $upload,
                 schema => $schema,
-                file_storage => $file_storage,
             )->execute(),
         'Create file to unlink');
     my $short_name = File::Basename::basename($file_name);
-    my $fq_pathname = $file_storage->path_for_name($short_name);
-    ok(-f $fq_pathname, 'file exists in store');
 
     my $cmd = TestDbServer::Command::DeleteTemplate->new(
                 template_id => $template_id,
-                schema => $schema,
-                file_storage => $file_storage);
+                schema => $schema);
     ok($cmd, 'new');
     ok($cmd->execute(), 'execute');
-    ok(! -f $fq_pathname, 'file was removed');
+
+    ok(! $schema->find_template($template_id),
+        'template is deleted');
 };
 
 subtest 'delete database' => sub {
@@ -360,10 +331,3 @@ sub new_schema {
     return TestDbServer::Schema->connect("dbi:SQLite:dbname=$sqlite_file", '','');
 }
 
-sub new_file_storage {
-    my $app = FakeApp->new();
-    my $tmpdir = File::Temp::tempdir();
-
-    my $file_storage = TestDbServer::FileStorage->new(base_path => $tmpdir, app => $app);
-
-}

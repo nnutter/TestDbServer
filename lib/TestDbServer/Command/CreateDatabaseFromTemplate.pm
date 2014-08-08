@@ -1,5 +1,7 @@
 package TestDbServer::Command::CreateDatabaseFromTemplate;
 
+use File::Temp;
+
 use TestDbServer::PostgresInstance;
 use TestDbServer::Command::CreateDatabase;
 use TestDbServer::Exceptions;
@@ -10,7 +12,6 @@ extends 'TestDbServer::Command::CreateDatabase';
 
 has '+template_id' => ( isa => 'Str', is => 'ro', required => 1 );
 has '+owner' => ( isa => 'Maybe[Str]', is => 'ro', required => 0 );
-has 'file_storage' => ( isa => 'TestDbServer::FileStorage', is => 'ro', required => 1 );
 
 no Moose;
 
@@ -46,10 +47,12 @@ sub execute {
 
     my $template = _template_id_must_exist($self->schema, $self->template_id);
 
-    my $pathname = $self->file_storage->path_for_name($template->file_path);
-    unless ($pathname and -f $pathname) {
-        Exception::CannotOpenFile->throw(path => $pathname, error => 'Not found or Not a file');
+    my $tmpfile = File::Temp->new();
+    unless ($tmpfile) {
+        Exception::CannotOpenFile->throw(error => $!, path => 'File::Temp->new()');
     }
+    $tmpfile->print($template->sql_script);
+    $tmpfile->close();
 
     my $pg = TestDbServer::PostgresInstance->new(
                         name => $database->name,
@@ -59,7 +62,7 @@ sub execute {
                         superuser => $self->superuser,
                     );
 
-    $pg->importdb($pathname);
+    $pg->importdb($tmpfile->filename);
 
     return $database;
 }

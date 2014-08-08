@@ -64,15 +64,10 @@ subtest 'get' => sub {
 subtest 'create from template' => sub {
     plan tests => 12;
 
-    my $template_file = File::Temp->new();
-    $template_file->print('CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY)');
-    $template_file->close();
-    my $template_file_path = $app->file_storage->save($template_file->filename);
-
     my $db = $app->db_storage();
     my $template_owner = 'genome';
     my $template = $db->create_template(name => 'test template',
-                                        file_path => $template_file_path,
+                                        sql_script => 'CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY)',
                                         owner => $template_owner,
                                     );
     my $test =

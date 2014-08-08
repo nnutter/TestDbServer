@@ -9,7 +9,6 @@ has name => ( isa => 'Str', is => 'ro', required => 1 );
 has note => ( isa => 'Maybe[Str]', is => 'ro', required => 1 );
 has database_id => ( isa => 'Str', is => 'ro', required => 1 );
 has schema => ( isa => 'TestDbServer::Schema', is => 'ro', required => 1 );
-has file_storage => ( isa => 'TestDbServer::FileStorage', is => 'ro', required => 1 );
 
 no Moose;
 
@@ -32,13 +31,21 @@ sub execute {
                                                  SUFFIX => '.sql');
     $pg->exportdb($dump_file);
 
+    my $sql_script = do {
+        local $/;
+        open my $fh, '<', $dump_file;
+        unless ($fh) {
+            Exception::CannotOpenFile->throw(error => $!, path => $dump_file);
+        }
+        <$fh>;
+    };
+
     my $template = $self->schema->create_template(
                                 name => $self->name,
                                 note => $self->note,
                                 owner => $database->owner,
-                                file_path => $dump_file,
+                                sql_script => $sql_script,
                             );
-    $self->file_storage->save($dump_file);
 
     return $template->template_id;
 }

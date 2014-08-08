@@ -7,7 +7,6 @@ Returns 200 and JSON in the body
 {
     template_count: Integer - count of the templates stored
     database_count: Integer - count of live databases
-    file_path: String - Path on the server where template files are stored
 }
 
 ----------------------------------------------------
@@ -55,7 +54,7 @@ note: String - human readable info about this template (optional)
 file: file upload (required)
 
 Returns 201 if successful, and the URL of the new uploaded thing in the Location header
-Returns 409 if there is already a template with that name or file name
+Returns 409 if there is already a template with that name
 
 -------------------------------------------------------
 

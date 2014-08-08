@@ -187,7 +187,7 @@ subtest 'update expire time' => sub {
             ->json_has('/expires');
     ok(_connect_to_created_database($created_db_info), 'connect immediately after patching ttl');
 
-    diag('waiting to expire...');
+    note('waiting to expire...');
     sleep($expire_ttl * 2);
 
     $t->get_ok($db_url)

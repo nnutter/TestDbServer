@@ -124,6 +124,14 @@ sub sql_to_update_expire_column {
             : "now() + interval '$ttl second'"; # PostgreSQL
 }
 
+sub sql_to_update_last_used_column {
+    my $self = shift;
+
+    return $self->_driver_type eq 'SQLite'
+            ? q(datetime('now'))
+            : 'now()';
+}
+
 sub search_expired_databases {
     my $self = shift;
 

@@ -64,6 +64,9 @@ sub execute {
 
     $pg->importdb($tmpfile->filename);
 
+    my $update_last_used_sql = $self->schema->sql_to_update_last_used_column();
+    $template->update({ last_used_time => \$update_last_used_sql });
+
     return $database;
 }
 

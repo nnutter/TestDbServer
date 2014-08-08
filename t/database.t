@@ -62,16 +62,24 @@ subtest 'get' => sub {
 };
 
 subtest 'create from template' => sub {
-    plan tests => 12;
+    plan tests => 13;
 
     my $db = $app->db_storage();
     my $template_owner = 'genome';
-    my $template = $db->create_template(name => 'test template',
-                                        sql_script => 'CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY)',
-                                        owner => $template_owner,
-                                    );
+    my $template_id = do {
+        my $template = $db->create_template(name => 'test template',
+                                            sql_script => 'CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY)',
+                                            owner => $template_owner,
+                                        );
+        $template->template_id;
+    };
+
+    my $template = $db->find_template($template_id);
+
+    sleep(1);  # allow the last_used_time to change
+
     my $test =
-        $t->post_ok('/databases?based_on=' . $template->template_id)
+        $t->post_ok("/databases?based_on=${template_id}")
             ->status_is(201)
             ->json_is('/owner' => $template_owner)
             ->json_has('/id')
@@ -84,6 +92,11 @@ subtest 'create from template' => sub {
 
     my $created_db_info = $test->tx->res->json;
     ok(_connect_to_created_database($created_db_info), 'connect to created database');
+
+    my $template_after_create = $db->find_template($template->template_id);
+    isnt($template_after_create->last_used_time,
+         $template->last_used_time,
+         'Template last used time was updated');
 
     $t->post_ok('/databases?based_on=bogus')
         ->status_is(404, 'Cannot create DB based on bogus template_id');

@@ -27,14 +27,44 @@ use Exception::Class (
         fields => ['path'],
     },
 
-    Exception::CannotCreateDatabase => {
+    Exception::CannotUnlinkFile => {
         isa => 'Exception::BaseException',
-        fields => [qw(exit_code output)],
+        fields => ['path'],
+    },
+
+    Exception::ShellCommandFailed => {
+        isa => 'Exception::BaseException',
+        fields => [qw(exit_code signal core_dump output)],
+    },
+
+    Exception::CannotCreateDatabase => {
+        isa => 'Exception::ShellCommandFailed',
     },
 
     Exception::CannotDropDatabase => {
+        isa => 'Exception::ShellCommandFailed',
+    },
+
+    Exception::CannotExportDatabase => {
+        isa => 'Exception::ShellCommandFailed',
+    },
+
+    Exception::CannotImportDatabase => {
+        isa => 'Exception::ShellCommandFailed',
+    },
+
+    Exception::SuperuserRequired => {
         isa => 'Exception::BaseException',
-        fields => [qw(exit_code output)],
+    },
+
+    Exception::DatabaseNotFound => {
+        isa => 'Exception::BaseException',
+        fields => [qw(database_id)],
+    },
+
+    Exception::TemplateNotFound => {
+        isa => 'Exception::BaseException',
+        fields => [qw(template_id)],
     },
 );
 
@@ -64,6 +94,20 @@ sub _find_source_location {
     my $frame = $self->trace->next_frame;
 
     return $frame->filename . ': ' . $frame->line;
+}
+
+package Exception::ShellCommandFailed;
+
+sub throw {
+    my($class, %params) = @_;
+
+    # extract info from the passed-in error code
+    if (my $child_error = delete $params{child_error}) {
+        $params{exit_code} = $child_error >> 8;
+        $params{signal} = $child_error & 127;
+        $params{core_dump} = $child_error & 128;
+    }
+    $class->SUPER::throw(%params);
 }
 
 1;

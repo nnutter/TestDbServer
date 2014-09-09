@@ -25,7 +25,6 @@ has 'owner' => (
 has 'superuser' => (
     is => 'ro',
     isa => 'Str',
-    required => 1,
 );
 has 'name' => (
     is => 'ro',
@@ -48,9 +47,13 @@ sub createdb {
     my $superuser = $self->superuser;
     my $name = $self->name;
 
+    unless ($superuser) {
+        Exception::SuperuserRequired->throw();
+    }
+
     my $output = `$createdb -h $host -p $port -U $superuser -O $owner $name 2>&1`;
     if ($? != 0) {
-        Exception::CannotCreateDatabase->throw(error => "$createdb failed", output => $output, exit_code => $?);
+        Exception::CannotCreateDatabase->throw(error => "$createdb failed", output => $output, child_error => $?);
     }
     return 1;
 }
@@ -74,7 +77,41 @@ sub dropdb {
 
     my $output = `$dropdb -h $host -p $port -U $owner $name 2>&1`;
     if ($? != 0) {
-        Exception::CannotDropDatabase->throw(error => "$dropdb failed", output => $output, exit_code => $?);
+        Exception::CannotDropDatabase->throw(error => "$dropdb failed", output => $output, child_error => $?);
+    }
+    return 1;
+}
+
+sub exportdb {
+    my($self, $filename) = @_;
+
+    my $pg_dump = $self->app_pg->pg_dump;
+
+    my $host = $self->host;
+    my $port = $self->port;
+    my $owner = $self->owner;
+    my $name = $self->name;
+
+    my $output = qx($pg_dump -h $host -p $port -U $owner -f $filename $name 2>&1);
+    if ($? != 0) {
+        Exception::CannotExportDatabase->throw(error => "$pg_dump failed", output => $output, child_error => $?);
+    }
+    return 1;
+}
+
+sub importdb {
+    my($self, $filename) = @_;
+
+    my $psql = $self->app_pg->psql;
+
+    my $host = $self->host;
+    my $port = $self->port;
+    my $owner = $self->owner;
+    my $name = $self->name;
+
+    my $output = qx($psql -h $host -p $port -U $owner -d $name -f $filename --set=ON_ERROR_STOP=1 2>&1);
+    if ($? != 0) {
+        Exception::CannotImportDatabase->throw(error => "$psql failed", output => $output, child_error => $?);
     }
     return 1;
 }

@@ -15,8 +15,8 @@ sub _create_table_sql_SQLite {
             name VARCHAR NOT NULL,
             owner VARCHAR NOT NULL,
             create_time TIMESTAMP NOT NULL DEFAULT(datetime('now')),
-            expire_time TIMESTAMP NOT NULL DEFAULT(datetime('now')),
-            template_id INTEGER NOT NULL REFERENCES db_template(template_id),
+            expire_time TIMESTAMP NOT NULL DEFAULT(datetime('now','+7 day')),
+            template_id INTEGER REFERENCES db_template(template_id),
             UNIQUE (host, port, name))
     );
 }

@@ -110,5 +110,36 @@ sub create_template {
 
     return $self->resultset('Template')->create(\%params);
 }
+
+# Ugly!
+sub _driver_type {
+    shift->storage->dbh->{Driver}->{Name};
+}
+
+sub sql_to_update_expire_column {
+    my($self, $ttl) = @_;
+
+    return $self->_driver_type eq 'SQLite'
+            ? "datetime('now','+$ttl second')"  # SQLite
+            : "now() + interval '$ttl second'"; # PostgreSQL
+}
+
+sub sql_to_update_last_used_column {
+    my $self = shift;
+
+    return $self->_driver_type eq 'SQLite'
+            ? q(datetime('now'))
+            : 'now()';
+}
+
+sub search_expired_databases {
+    my $self = shift;
+
+    my $criteria = $self->_driver_type eq 'SQLite'
+                    ? q(datetime('now'))
+                    : q(now());
+
+    return $self->resultset('Database')->search({ expire_time => { '<' => \$criteria }});
+}
  
 1;

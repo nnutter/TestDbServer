@@ -4,6 +4,11 @@ use Mojo::Base 'Mojolicious::Controller';
 use Try::Tiny;
 use File::Basename;
 
+use TestDbServer::Utils;
+use TestDbServer::Command::SaveTemplateFile;
+use TestDbServer::Command::DeleteTemplate;
+use TestDbServer::Command::CreateTemplateFromDatabase;
+
 sub list {
     my $self = shift;
 
@@ -23,7 +28,7 @@ sub get {
 
     my $template = $schema->find_template($id);
     if ($template) {
-        my %template = map { $_ => $template->$_ } qw(template_id name owner note file_path create_time last_used_time);
+        my %template = map { $_ => $template->$_ } qw(template_id name owner note sql_script create_time last_used_time);
         $self->render(json => \%template);
     } else {
         $self->render_not_found;
@@ -33,9 +38,9 @@ sub get {
 sub save {
     my $self = shift;
 
-    my $id = $self->stash('id');
-    if ($self->stash('based_on')) {
+    if ($self->req->param('based_on')) {
         $self->_save_based_on();
+
     } else {
         $self->_save_file();
     }
@@ -44,21 +49,19 @@ sub save {
 sub _save_file {
     my $self = shift;
 
-    my $name = $self->param('name');
-    my $owner = $self->param('owner');
-    my $note = $self->param('note');
-    my $upload = $self->req->upload('file');
-
-    my $upload_filename = File::Basename::basename($upload->filename);
     my $schema = $self->app->db_storage;
-    my $file_storage = $self->app->file_storage;
-
     my($template_id, $return_code);
     try {
+        my $cmd = TestDbServer::Command::SaveTemplateFile->new(
+                name => $self->param('name') || undef,
+                owner => $self->param('owner') || undef,
+                note => $self->param('note') || undef,
+                upload => $self->req->upload('file'),
+                schema => $schema,
+            );
+
         $schema->txn_do(sub {
-            my $template = $schema->create_template(name => $name, owner => $owner, note => $note, file_path => $upload_filename);
-            $file_storage->save_upload($upload);
-            $template_id = $template->template_id;
+            $template_id = $cmd->execute();
             $return_code = 201;
         });
     }
@@ -67,7 +70,7 @@ sub _save_file {
             ||
             (ref($_) && $_->isa('DBIx::Class::Exception') && $_ =~ m/UNIQUE constraint failed/i)
         ) {
-            $return_code = 403;
+            $return_code = 409;
         } else {
             $self->app->log->error("save_file: $_");
             $return_code = 500;
@@ -75,7 +78,7 @@ sub _save_file {
     };
 
     if ($template_id) {
-        my $response_location = join('/', $self->req->url, $template_id);
+        my $response_location = TestDbServer::Utils::id_url_for_request_and_entity_id($self->req, $template_id);
         $self->res->headers->location($response_location);
     }
 
@@ -85,6 +88,46 @@ sub _save_file {
 sub _save_based_on {
     my $self = shift;
 
+    my $schema = $self->app->db_storage;
+    my ($template_id, $return_code);
+    try {
+        unless ($self->param('name')) {
+            Exception::RequiredParamMissing->throw(params => ['name']);
+        }
+
+        my $cmd = TestDbServer::Command::CreateTemplateFromDatabase->new(
+                        name => $self->param('name') || undef,
+                        note => $self->param('note') || undef,
+                        database_id => $self->param('based_on') || undef,
+                        schema => $schema,
+                    );
+        $schema->txn_do(sub {
+            $template_id = $cmd->execute();
+            $return_code = 201;
+        });
+    }
+    catch {
+        if (ref($_) && $_->isa('Exception::RequiredParamMissing')) {
+            $return_code = 400;
+
+        } elsif (ref($_) && $_->isa('Exception::DatabaseNotFound')) {
+            $return_code = 404;
+
+        } elsif (ref($_) && $_->isa('DBIx::Class::Exception') && m/UNIQUE constraint failed: db_template\.name/) {
+            $return_code = 409;
+
+        } else {
+            $self->app->log->error("create template based on: $_");
+            die $_;
+        }
+
+    };
+
+    if ($template_id) {
+        my $response_location = TestDbServer::Utils::id_url_for_request_and_entity_id($self->req, $template_id);
+        $self->res->headers->location($response_location);
+    }
+    $self->rendered($return_code);
 }
 
 sub delete {
@@ -95,13 +138,22 @@ sub delete {
 
     my $return_code;
     try {
+        my $cmd = TestDbServer::Command::DeleteTemplate->new(
+                    template_id => $id,
+                    schema => $schema,
+                );
         $schema->txn_do(sub {
-            $schema->delete_template($id);
+            $cmd->execute();
             $return_code = 204;
         });
     }
     catch {
-        $return_code = 404;
+        if (ref($_) && $_->isa('Exception::TemplateNotFound') || $_->isa('Exception::CannotUnlinkFile')) {
+            $return_code = 404;
+        } else {
+            $self->app->log->error("_create_database_from_template: $_");
+            die $_;
+        }
     };
 
     $self->rendered($return_code);

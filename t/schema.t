@@ -40,27 +40,23 @@ subtest initialize => sub {
 
 my @templates;
 subtest save_template => sub {
-    plan tests => 7;
+    plan tests => 6;
 
-    my $template_1 = $schema->create_template(name => 'template 1', owner => 'bubba', file_path => '/tmp/file1', note => 'hi there');
+    my $template_1 = $schema->create_template(name => 'template 1', owner => 'bubba', sql_script => '', note => 'hi there');
     ok($template_1,'Save template with a note');
     push @templates, $template_1;
 
-    my $template_2 = $schema->create_template(name => 'template_2', owner => 'bubba', file_path => '/tmp/file2');
+    my $template_2 = $schema->create_template(name => 'template_2', owner => 'bubba', sql_script => '');
     ok($template_2, 'Save template without a note');
     push @templates, $template_2;
 
-    throws_ok { $schema->create_template(name => 'template 1', owner => 'bubba', file_path => 'garbage', note => 'garbage') }
+    throws_ok { $schema->create_template(name => 'template 1', owner => 'bubba', sql_script => '', note => 'garbage') }
         'DBIx::Class::Exception',
         'Cannot save_template() with duplicate name';
 
-    throws_ok { $schema->create_template(name => 'duplicate', owner => 'bubba', file_path => '/tmp/file1') }
-        'DBIx::Class::Exception',
-        'Cannot save_template() with duplicate file_path';
-
     check_required_attributes_for_save(
         sub { $schema->create_template(@_) },
-        { name => 'template name', file_path => '/path/to/file', owner => 'bubba' },
+        { name => 'template name', sql_script => '', owner => 'bubba' },
     );
 };
 

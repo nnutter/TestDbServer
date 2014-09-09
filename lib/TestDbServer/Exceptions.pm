@@ -96,4 +96,18 @@ sub _find_source_location {
     return $frame->filename . ': ' . $frame->line;
 }
 
+package Exception::ShellCommandFailed;
+
+sub throw {
+    my($class, %params) = @_;
+
+    # extract info from the passed-in error code
+    if (my $child_error = delete $params{child_error}) {
+        $params{exit_code} = $child_error >> 8;
+        $params{signal} = $child_error & 127;
+        $params{core_dump} = $child_error & 128;
+    }
+    $class->SUPER::throw(%params);
+}
+
 1;

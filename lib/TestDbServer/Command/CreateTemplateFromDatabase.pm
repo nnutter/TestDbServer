@@ -27,15 +27,18 @@ sub execute {
                     name => $database->name,
                 );
 
-    my(undef, $dump_file) = File::Temp::tempfile(TEMPLATE => 'dump_' . $self->database_id . '_XXXX',
-                                                 SUFFIX => '.sql');
-    $pg->exportdb($dump_file);
+    my $dump_fh = File::Temp->new(TEMPLATE => 'dump_' . $self->database_id . '_XXXX',
+                                    SUFFIX => '.sql',
+                                    TMPDIR => 1);
+    $dump_fh->close();
+
+    $pg->exportdb($dump_fh->filename);
 
     my $sql_script = do {
         local $/;
-        open my $fh, '<', $dump_file;
+        open my $fh, '<', $dump_fh;
         unless ($fh) {
-            Exception::CannotOpenFile->throw(error => $!, path => $dump_file);
+            Exception::CannotOpenFile->throw(error => $!, path => $dump_fh->filename);
         }
         <$fh>;
     };

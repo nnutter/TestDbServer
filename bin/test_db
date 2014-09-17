@@ -12,26 +12,28 @@ use warnings;
 
 alter_perl5lib_for_testdbserver_libs();
 
-my @sub_command;
-while(@ARGV and substr($ARGV[0], 0, 1) ne '-') {
-    push @sub_command, shift @ARGV;
-}
-
 my $base_command_path = File::Spec->canonpath($0);
 if ($base_command_path !~ m#/# and -e $base_command_path) {
     # run from the path or current directory
     $base_command_path = './' . $base_command_path;
 }
-my $command_to_run = join('-', $base_command_path, @sub_command);
 
-if (!@sub_command or (grep { $_ eq '--help'} @ARGV)) {
-    show_help($command_to_run);
-    exit(0);
+my @sub_command;
+while(@ARGV and substr($ARGV[0], 0, 1) ne '-') {
+    push @sub_command, shift @ARGV;
 }
 
+if (@sub_command) {
+    for( my $split_pos = $#sub_command; $split_pos >= 0; $split_pos-- ) {
+        my $command_to_run = join('-', $base_command_path, @sub_command[0 .. $split_pos]);
+        my @args_for_command = @sub_command[$split_pos+1 .. $#sub_command];
 
-exec($command_to_run, @ARGV)
- || exit(1);
+        no warnings 'exec';
+        exec($command_to_run, @args_for_command, @ARGV);
+    }
+}
+
+show_help($base_command_path);
 
 sub show_help {
     my $parsed_sub_command = shift;

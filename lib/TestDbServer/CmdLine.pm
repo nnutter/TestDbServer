@@ -6,6 +6,7 @@ use File::Spec;
 use File::Basename;
 use LWP;
 use Carp;
+use URI::Escape qw(uri_escape);
 
 use strict;
 use warnings;
@@ -45,7 +46,23 @@ sub base_url {
 }
 
 sub url_for {
-    return join('/', base_url(), @_);
+    my $query_string;
+    if (ref($_[$#_])) {
+        my $query_list = pop @_;
+        my @query_list = map { uri_escape($_) } @$query_list;
+
+        my @query_strings;
+        for(my $i = 0; $i < @query_list; $i+=2) {
+            push @query_strings, join('=', @query_list[$i, $i+1]);
+        }
+        $query_string = join('&', @query_strings);
+    }
+
+    my $url = join('/', base_url(), @_);
+    if ($query_string) {
+        $url .= '?' . $query_string;
+    }
+    return $url;
 }
 
 sub assert_success {

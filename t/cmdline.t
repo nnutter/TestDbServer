@@ -1,8 +1,8 @@
-use Test::More tests => 1;
+use Test::More tests => 2;
 use File::Temp;
 use File::Spec;
 
-use TestDbServer::CmdLine;
+use TestDbServer::CmdLine qw(url_for);
 
 subtest split_into_command_to_run_and_args => sub {
     # make some fake commands
@@ -31,5 +31,21 @@ subtest split_into_command_to_run_and_args => sub {
         is($command_to_run, $expected_command_to_run, 'command '.$i/3);
         is_deeply(\@args_for_command, $expected_args_for_command, 'command args');
     }
-}
+};
 
+subtest url_for => sub {
+    plan tests => 3;
+
+    my $base_url = local $ENV{TESTDBSERVER_URL} = 'http://test.url.example.com';
+    is(url_for('templates'),
+        "${base_url}/templates",
+        'templates');
+
+    is(url_for('templates',123),
+        "${base_url}/templates/123",
+        'templates/123');
+
+    is(url_for('databases', 123, [owner => 'bob', foo => 'bar']),
+        "${base_url}/databases/123?owner=bob&foo=bar",
+        'url with query string');
+};

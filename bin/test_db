@@ -1,0 +1,66 @@
+#!/usr/bin/env perl
+
+# Entry point for the client-side command-line tool for the test_db_server REST service
+
+use File::Basename qw(fileparse);
+use File::Spec;
+
+use TestDbServer::CmdLine;
+
+use strict;
+use warnings;
+
+alter_perl5lib_for_testdbserver_libs();
+
+my @sub_command;
+while(@ARGV and substr($ARGV[0], 0, 1) ne '-') {
+    push @sub_command, shift @ARGV;
+}
+
+my $base_command_path = File::Spec->canonpath($0);
+if ($base_command_path !~ m#/# and -e $base_command_path) {
+    # run from the path or current directory
+    $base_command_path = './' . $base_command_path;
+}
+my $command_to_run = join('-', $base_command_path, @sub_command);
+
+if (!@sub_command or (grep { $_ eq '--help'} @ARGV)) {
+    show_help($command_to_run);
+    exit(0);
+}
+
+
+exec($command_to_run, @ARGV)
+ || exit(1);
+
+sub show_help {
+    my $parsed_sub_command = shift;
+    
+    my @sub_commands = TestDbServer::CmdLine::find_available_sub_command_paths($parsed_sub_command);
+    
+    my @help;
+    my $remove_from_beginning = length($parsed_sub_command);
+    foreach my $cmd ( @sub_commands ) {
+        my $short_help = `$cmd --short-help`;
+        $short_help =~ s/\n.*//s;
+        my $sub_cmd = substr($cmd,
+                             $remove_from_beginning+1);
+        push @help, [ $sub_cmd, $short_help ];
+    }
+
+    my $max_width = -1;
+    foreach my $help ( @help ) {
+        my $length = length($help->[0]);
+        $max_width = $length if ($length > $max_width);
+    }
+    print "$parsed_sub_command has these available sub-commands:\n";
+    $max_width += 2;
+    foreach my $help ( @help ) {
+        printf("%-${max_width}s %s\n", @$help);
+    }
+}
+
+sub alter_perl5lib_for_testdbserver_libs {
+    my $dir = (fileparse($INC{'TestDbServer/CmdLine.pm'}))[0];
+    $ENV{PERL5LIB} = join(':', $dir, $ENV{PERL5LIB});
+}

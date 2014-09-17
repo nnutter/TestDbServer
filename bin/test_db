@@ -54,6 +54,9 @@ sub show_help {
 }
 
 sub alter_perl5lib_for_testdbserver_libs {
-    my $dir = (fileparse($INC{'TestDbServer/CmdLine.pm'}))[0];
+    my $dir = File::Spec->canonpath( (fileparse($INC{'TestDbServer/CmdLine.pm'}))[1] );
+    my @dirs = File::Spec->splitdir($dir);
+    pop @dirs; # remove 'TestDbServer'
+    $dir = File::Spec->catdir(@dirs);
     $ENV{PERL5LIB} = join(':', $dir, $ENV{PERL5LIB});
 }

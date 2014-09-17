@@ -1,0 +1,72 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use TestDbServer::CmdLine qw(make_user_agent url_for assert_success);
+use JSON qw(decode_json);
+
+if (grep { $_ eq '--short-help'} @ARGV) {
+    print_short_help();
+    exit 0;
+}
+
+my $entity = shift @ARGV;
+if ($entity eq 'templates'
+    or
+    $entity eq 'databases'
+) {
+    lister($entity);
+} else {
+    print STDERR "Cannot list $entity\n";
+    exit 1;
+}
+
+sub lister {
+    my $type = shift;
+    my $ua = make_user_agent();
+
+    my $req = HTTP::Request->new(GET => url_for($type));
+    my $rsp = $ua->request($req);
+    _print_names_for_list_response($ua, $type, $rsp);
+}
+
+sub _get_template_data {
+    my $data = shift;
+    return @$data{'name','note'};
+}
+
+sub _get_database_data {
+    my $data = shift;
+    return ($data->{name},
+            'expires: ' . $data->{expires});
+}
+
+
+my %entity_data_formatter;
+BEGIN {
+    %entity_data_formatter = (
+        'templates' => \&_get_template_data,
+        'databases' => \&_get_database_data,
+    );
+}
+sub _print_names_for_list_response {
+    my($ua, $type, $rsp) = @_;
+
+    assert_success($rsp);
+
+    my $data_cb = $entity_data_formatter{$type};
+
+    my $id_list = decode_json($rsp->content);
+    foreach my $id ( @$id_list ) {
+        my $req = HTTP::Request->new(GET => url_for($type, $id));
+        my $rsp = $ua->request($req);
+        next unless eval { assert_success $rsp };
+        my $data = decode_json($rsp->content);
+        print join("\t", $data_cb->($data)), "\n";
+    }
+}
+
+sub print_short_help {
+    print "list templates or databases";
+}

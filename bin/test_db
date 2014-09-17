@@ -38,6 +38,7 @@ sub show_help {
         $short_help =~ s/\n.*//s;
         my $sub_cmd = substr($cmd,
                              $remove_from_beginning+1);
+        $sub_cmd =~ s/-/ /g;
         push @help, [ $sub_cmd, $short_help ];
     }
 

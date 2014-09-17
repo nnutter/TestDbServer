@@ -7,7 +7,6 @@ has db_user             => ( is => 'rw' );
 has db_password         => ( is => 'rw' );
 has db_host             => ( is => 'rw' );
 has db_port             => ( is => 'rw' );
-has file_storage_path   => ( is => 'rw' );
 
 sub new_from_app_config {
     my($class, $config) = @_;

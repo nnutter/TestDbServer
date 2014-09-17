@@ -10,11 +10,9 @@ use TestDbServer::Configuration;
 
 plan tests => 7;
 
-my $file_storage_path = File::Temp::tempdir( CLEANUP => 1);
 my $db = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
 my $connect_string = 'dbi:SQLite:' . $db->filename;
 my $config = TestDbServer::Configuration->new(
-                    file_storage_path => $file_storage_path,
                     db_connect_string => $connect_string,
                     db_host => 'localhost',
                     db_port => 5434,

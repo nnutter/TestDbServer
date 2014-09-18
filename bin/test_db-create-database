@@ -6,7 +6,7 @@ use Getopt::Long;
 use JSON qw(decode_json);
 
 my $opts = {};
-GetOptions($opts, 'owner=s', 'based-on','short-help','help');
+GetOptions($opts, 'owner=s', 'based-on=s','short-help','help');
 
 print_short_help() if ($opts->{'short-help'});
 print_help() if ($opts->{help});
@@ -17,9 +17,7 @@ unless ($opts->{owner} xor $opts->{'based-on'}) {
 }
 
 my $ua = make_user_agent();
-my @options = $opts->{owner}
-                ? ( owner => $opts->{owner} )
-                : ( based_on => $opts->{'based-on'} );
+my @options = make_post_options($opts);
 my $req = HTTP::Request->new(POST => url_for('databases', \@options));
 my $rsp = $ua->request($req);
 assert_success $rsp;
@@ -28,7 +26,29 @@ my $new_db = decode_json($rsp->content);
 print "CREATED ",$new_db->{name},"\n";
 exit 0;
 
+sub make_post_options {
+    my $opts = shift;
+    my @options;
+    if ($opts->{owner}) {
+        @options = ( owner => $opts->{owner} );
 
+    } else {
+        my $req = HTTP::Request->new(GET => url_for('templates', [ name => $opts->{'based-on'} ]));
+        my $rsp = $ua->request($req);
+        assert_success $rsp;
+
+        my $ids = decode_json($rsp->content);
+        if (! @$ids) {
+            print STDERR "There is no template with that name\n";
+            exit 2;
+        } elsif (@$ids > 1) {
+            print STDERR "There are multiple matches for that name?! (found ",scalar(@$ids),"\n";
+            exit 3;
+        }
+        @options = ( 'based_on' => $ids->[0] );
+    }
+    return @options;
+}
 
 sub print_short_help {
     print "create a test database\n";

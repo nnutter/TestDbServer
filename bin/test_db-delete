@@ -1,0 +1,74 @@
+#!/usr/bin/env perl
+
+use TestDbServer::CmdLine qw(make_user_agent url_for assert_success);
+use LWP;
+use JSON qw(decode_json);
+use Getopt::Long;
+
+use strict;
+use warnings;
+
+my $opts = {};
+GetOptions($opts, 'short-help', 'help');
+print_short_help() if ($opts->{'short-help'});
+print_help() if ($opts->{help});
+
+my $type = shift @ARGV;
+if ($type ne 'database' and $type ne 'template') {
+    print STDERR "Cannot delete a $type\n";
+    exit 1;
+}
+if (@ARGV != 1) {
+    print STDERR "Exactly one can be deleted, got ",scalar(@ARGV);
+    exit 1;
+}
+
+my $ua = make_user_agent();
+
+my $id = find_id_from_name($type, $ARGV[0]);
+delete_id($type, $id);
+exit 0;
+
+sub find_id_from_name {
+    my($type, $name) = @_;
+
+    my $req = HTTP::Request->new(GET => url_for("${type}s", [name => $name]));
+    my $rsp = $ua->request($req);
+    assert_success $rsp;
+
+    my $ids = decode_json($rsp->content);
+    if (! @$ids) {
+        print STDERR "No $type with that name\n";
+        exit 2;
+    } elsif (@$ids > 1) {
+        print STDERR scalar(@$ids), " ${type}s have that name!?\n";
+        exit 3;
+    }
+    return $ids->[0];
+}
+
+sub delete_id {
+    my($type, $id) = @_;
+
+    my $req = HTTP::Request->new(DELETE => url_for("${type}s", $id));
+    my $rsp = $ua->request($req);
+    assert_success $rsp;
+
+    print "DELETED\n";
+}
+
+
+sub print_short_help {
+    print "delete a template or database\n";
+    exit;
+}
+
+sub print_help {
+    print <<"EOS";
+Usage: $0 template <name>
+       $0 database <name>
+
+Delete a template or a database.
+EOS
+    exit;
+}

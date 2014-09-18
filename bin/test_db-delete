@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use TestDbServer::CmdLine qw(make_user_agent url_for assert_success);
+use TestDbServer::CmdLine qw(get_user_agent url_for assert_success);
 use LWP;
 use JSON qw(decode_json);
 use Getopt::Long;
@@ -23,7 +23,7 @@ if (@ARGV != 1) {
     exit 1;
 }
 
-my $ua = make_user_agent();
+my $ua = get_user_agent();
 
 my $id = find_id_from_name($type, $ARGV[0]);
 delete_id($type, $id);

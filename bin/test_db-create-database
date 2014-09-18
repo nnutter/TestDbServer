@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use TestDbServer::CmdLine qw(make_user_agent url_for assert_success);
+use TestDbServer::CmdLine qw(get_user_agent url_for assert_success);
 use LWP;
 use Getopt::Long;
 use JSON qw(decode_json);
@@ -16,7 +16,7 @@ unless ($opts->{owner} xor $opts->{'based-on'}) {
     exit 1;
 }
 
-my $ua = make_user_agent();
+my $ua = get_user_agent();
 my @options = make_post_options($opts);
 my $req = HTTP::Request->new(POST => url_for('databases', \@options));
 my $rsp = $ua->request($req);

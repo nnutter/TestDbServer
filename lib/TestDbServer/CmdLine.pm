@@ -12,7 +12,7 @@ use strict;
 use warnings;
 
 use Exporter 'import';
-our @EXPORT_OK = qw(make_user_agent url_for assert_success);
+our @EXPORT_OK = qw(get_user_agent url_for assert_success template_id_from_name database_id_from_name);
 
 sub find_available_sub_command_paths {
     my($cmd) = shift;
@@ -35,9 +35,12 @@ sub split_into_command_to_run_and_args {
     return ($base_command_path, @argv);
 }
 
-sub make_user_agent {
-    my $ua = LWP::UserAgent->new;
-    $ua->agent("TestDbServer::CmdLine/0.1 ");
+my $ua;
+sub get_user_agent {
+    unless($ua) {
+        $ua = LWP::UserAgent->new;
+        $ua->agent("TestDbServer::CmdLine/0.1 ");
+    }
     return $ua;
 }
 

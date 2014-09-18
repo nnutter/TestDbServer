@@ -12,12 +12,33 @@ sub list {
 
     $self->_remove_expired_databases();
 
-    my $databases = $self->app->db_storage->search_database;
-    my @ids;
-    while (my $db = $databases->next) {
-        push @ids, $db->database_id;
+    my $params = $self->req->params->to_hash;
+    my $databases = %$params
+                    ? $self->app->db_storage->search_database(%$params)
+                    : $self->app->db_storage->search_database;
+
+    my(@ids, @render_args);
+    @render_args = ( json => \@ids );
+    try {
+        while (my $db = $databases->next) {
+            push @ids, $db->database_id;
+        }
     }
-    $self->render(json => \@ids);
+    catch {
+        if (ref($_)
+            and
+            $_->isa('DBIx::Class::Exception')
+            and
+            $_ =~ m/(no such column: \w+)/
+        ) {
+            @render_args = ( status => 400, text => $1 );
+        } else {
+            die $_;
+        }
+    }
+    finally {
+        $self->render(@render_args);
+    };
 }
 
 sub get {

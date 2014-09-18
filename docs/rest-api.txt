@@ -24,6 +24,18 @@ Returns 200 and JSON in the body
 
 ------------------------------------------------------
 
+GET /templates?<field>=<value>
+GET /templates?<field>=<value>&<field=<value>&...
+
+Get a list of template IDs that match the given filter
+
+Returns 200 and JSON in the body
+[ <id>, <id>, ... ]
+
+Returns 400 if one of the fields is not appropriate
+
+---------------------------------------------------
+
 GET /templates/<id>
 
 Get info about a particular template
@@ -89,6 +101,18 @@ Returns 200 and JSON in the body
 ]
 
 ------------------------------------------------
+
+GET /databases?<field>=<value>
+GET /databases?<field>=<value>&<field=<value>&...
+
+Get a list of database IDs that match the given filter
+
+Returns 200 and JSON in the body
+[ <id>, <id>, ... ]
+
+Returns 400 if one of the fields is not appropriate
+
+-------------------------------------------------
 
 GET /databases/<id>
 

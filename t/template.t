@@ -7,7 +7,7 @@ use Mojo::JSON;
 use File::Temp;
 
 use TestDbServer::Configuration;
-plan tests => 6;
+plan tests => 7;
 
 my $db = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
 my $connect_string = 'dbi:SQLite:' . $db->filename;
@@ -40,6 +40,25 @@ subtest 'list' => sub {
     my $req = $t->get_ok('/templates')
                 ->status_is(200)
                 ->json_is($expected_data);
+};
+
+subtest 'search' => sub {
+    plan tests => 11;
+
+    $t->get_ok('/templates?name=foo')
+        ->status_is(200)
+        ->json_is([$templates[0]->template_id]);
+
+    $t->get_ok('/templates?owner=bubba')
+        ->status_is(200)
+        ->json_is([map { $_->template_id } @templates]);
+
+    $t->get_ok('/templates?owner=garbage')
+        ->status_is(200)
+        ->json_is([]);
+
+    $t->get_ok('/templates?garbage=foo')
+        ->status_is(400);
 };
 
 subtest 'get' => sub {

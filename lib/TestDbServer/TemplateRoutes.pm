@@ -89,7 +89,7 @@ sub _save_file {
     catch {
         if ((ref($_) && $_->isa('Exception::FileExists'))
             ||
-            (ref($_) && $_->isa('DBIx::Class::Exception') && $_ =~ m/UNIQUE constraint failed/i)
+            (ref($_) && $_->isa('DBIx::Class::Exception') && $_ =~ m/unique constraint/i)
         ) {
             $return_code = 409;
         } else {

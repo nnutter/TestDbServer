@@ -1,0 +1,65 @@
+#!/usr/bin/env perl
+
+use TestDbServer::CmdLine qw(make_user_agent url_for assert_success);
+use LWP;
+use HTTP::Request::Common qw(POST);
+use Getopt::Long;
+use JSON qw(decode_json);
+
+my $opts = {};
+GetOptions($opts, 'name=s', 'owner=s','note=s', 'short-help','help');
+
+print_short_help() if ($opts->{'short-help'});
+print_help() if ($opts->{help});
+
+if (@ARGV != 1) {
+    print STDERR "exactly one filename may be uploaded, got ",scalar(@ARGV),"\n";
+    exit 1;
+}
+unless ($opts->{name} and $opts->{owner}) {
+    print STDERR "--name and --owner are required arguments\n";
+    exit 1;
+}
+
+my $ua = make_user_agent();
+
+my @options = map { $_ => $opts->{$_} }
+              grep { exists $opts->{$_} }
+              qw( name owner note );
+push @options, 'file' => [ $ARGV[0] ];
+
+my $req = POST(url_for('templates'),
+                Content_Type => 'form-data',
+                Content => \@options);
+my $rsp = $ua->request($req);
+assert_success $rsp;
+
+print "CREATED ",$opts->{name},"\n";
+exit 0;
+
+
+sub read_file {
+    my $filename = shift;
+    local $/;
+    open my $fh, '<', $filename
+        || do {
+                print STDERR "Cannot open file $filename: $!\n";
+                exit 1;
+            };
+    return scalar(<$fh>);
+}
+
+sub print_short_help {
+    print "upload a test database template file\n";
+    exit;
+}
+
+sub print_help {
+    print <<"EOS";
+Usage: $0 --name <name> --owner <owner> [--note <string>] filename
+
+Create a new test database template with the given file.  --name, --owner and
+the filename are all required.
+EOS
+    exit;
+}

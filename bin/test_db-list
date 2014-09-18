@@ -32,14 +32,28 @@ sub lister {
 }
 
 sub _get_template_data {
-    my $data = shift;
+    my($ua, $data) = @_;
     return @$data{'name','note'};
 }
 
 sub _get_database_data {
-    my $data = shift;
+    my($ua, $data) = @_;
     return ($data->{name},
+            'tmpl: '. get_template_name_from_id($ua, $data->{template_id}),
             'expires: ' . $data->{expires});
+}
+
+sub get_template_name_from_id {
+    my($ua, $template_id) = @_;
+    return '<none>' unless defined $template_id;
+
+    my $req = HTTP::Request->new(GET => url_for('templates',$template_id));
+    my $rsp = $ua->request($req);
+    unless (eval { assert_success($rsp); 1 }) {
+        return '<unknown>';
+    }
+    my $tmpl = decode_json($rsp->content);
+    return $tmpl->{name};
 }
 
 
@@ -63,7 +77,7 @@ sub _print_names_for_list_response {
         my $rsp = $ua->request($req);
         next unless eval { assert_success $rsp };
         my $data = decode_json($rsp->content);
-        print join("\t", $data_cb->($data)), "\n";
+        print join("\t", $data_cb->($ua, $data)), "\n";
     }
 }
 

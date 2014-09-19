@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use TestDbServer::CmdLine qw(get_user_agent url_for assert_success get_template_name_from_id);
+use TestDbServer::CmdLine qw(get_user_agent url_for assert_success get_template_name_from_id foreach_database_or_template);
 use JSON qw(decode_json);
 
 if (grep { $_ eq '--short-help'} @ARGV) {
@@ -12,32 +12,37 @@ if (grep { $_ eq '--short-help'} @ARGV) {
 }
 
 my $entity = shift @ARGV;
-if ($entity eq 'templates'
+unless ($entity eq 'templates'
     or
     $entity eq 'databases'
 ) {
-    lister($entity);
-} else {
     print STDERR "Cannot list $entity\n";
     exit 1;
 }
 
-sub lister {
-    my $type = shift;
-    my $ua = get_user_agent();
+foreach_database_or_template($entity, make_printer_for_each_entity($entity));
 
-    my $req = HTTP::Request->new(GET => url_for($type));
-    my $rsp = $ua->request($req);
-    _print_names_for_list_response($ua, $type, $rsp);
+sub make_printer_for_each_entity {
+    my $type = shift;
+
+    my %entity_data_formatter = (
+        'templates' => \&_get_template_data,
+        'databases' => \&_get_database_data,
+    );
+
+    my $formatter = $entity_data_formatter{$type};
+    return sub {
+        print join("\t", $formatter->(@_)), "\n";
+    };
 }
 
 sub _get_template_data {
-    my($ua, $data) = @_;
+    my($data) = @_;
     return @$data{'name','note'};
 }
 
 sub _get_database_data {
-    my($ua, $data) = @_;
+    my($data) = @_;
     my $template_name = get_template_name_from_id($data->{template_id});
     unless (defined $template_name) {
         $template_name = '<none>';
@@ -46,30 +51,6 @@ sub _get_database_data {
     return ($data->{name},
             "tmpl: $template_name",
             'expires: ' . $data->{expires});
-}
-
-my %entity_data_formatter;
-BEGIN {
-    %entity_data_formatter = (
-        'templates' => \&_get_template_data,
-        'databases' => \&_get_database_data,
-    );
-}
-sub _print_names_for_list_response {
-    my($ua, $type, $rsp) = @_;
-
-    assert_success($rsp);
-
-    my $data_cb = $entity_data_formatter{$type};
-
-    my $id_list = decode_json($rsp->content);
-    foreach my $id ( @$id_list ) {
-        my $req = HTTP::Request->new(GET => url_for($type, $id));
-        my $rsp = $ua->request($req);
-        next unless eval { assert_success $rsp };
-        my $data = decode_json($rsp->content);
-        print join("\t", $data_cb->($ua, $data)), "\n";
-    }
 }
 
 sub print_short_help {

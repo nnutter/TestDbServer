@@ -80,7 +80,4 @@ sub assert_success {
     return 1;
 }
 
-
 1;
-
-    

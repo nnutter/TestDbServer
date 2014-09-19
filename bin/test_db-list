@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use TestDbServer::CmdLine qw(get_user_agent url_for assert_success);
+use TestDbServer::CmdLine qw(get_user_agent url_for assert_success get_template_name_from_id);
 use JSON qw(decode_json);
 
 if (grep { $_ eq '--short-help'} @ARGV) {
@@ -38,24 +38,15 @@ sub _get_template_data {
 
 sub _get_database_data {
     my($ua, $data) = @_;
+    my $template_name = get_template_name_from_id($data->{template_id});
+    unless (defined $template_name) {
+        $template_name = '<none>';
+    }
+
     return ($data->{name},
-            'tmpl: '. get_template_name_from_id($ua, $data->{template_id}),
+            "tmpl: $template_name",
             'expires: ' . $data->{expires});
 }
-
-sub get_template_name_from_id {
-    my($ua, $template_id) = @_;
-    return '<none>' unless defined $template_id;
-
-    my $req = HTTP::Request->new(GET => url_for('templates',$template_id));
-    my $rsp = $ua->request($req);
-    unless (eval { assert_success($rsp); 1 }) {
-        return '<unknown>';
-    }
-    my $tmpl = decode_json($rsp->content);
-    return $tmpl->{name};
-}
-
 
 my %entity_data_formatter;
 BEGIN {

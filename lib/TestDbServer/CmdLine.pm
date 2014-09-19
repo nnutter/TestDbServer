@@ -85,12 +85,22 @@ sub assert_success {
 
 sub get_template_name_from_id {
     my($template_id) = @_;
+    return _get_type_name_from_id('templates', $template_id);
+}
 
-    return undef unless defined $template_id;
+sub get_database_name_from_id {
+    my($database_id) = @_;
+    return _get_type_name_from_id('databases', $database_id);
+}
+
+sub _get_type_name_from_id {
+    my($type, $id) = @_;
+
+    return undef unless defined $id;
 
     my $ua = get_user_agent();
 
-    my $req = HTTP::Request->new(GET => url_for('templates',$template_id));
+    my $req = HTTP::Request->new(GET => url_for($type, $id));
     my $rsp = $ua->request($req);
     unless (eval { assert_success($rsp); 1 }) {
         return undef;

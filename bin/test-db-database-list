@@ -1,0 +1,31 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use TestDbServer::CmdLine qw(get_user_agent url_for assert_success get_template_name_from_id foreach_database_or_template);
+
+if (grep { $_ eq '--short-help'} @ARGV) {
+    print_short_help();
+    exit 0;
+}
+
+foreach_database_or_template('databases', \&print_database_info);
+
+sub print_database_info {
+    my $database = shift;
+
+    my $template_name = get_template_name_from_id($database->{template_id});
+    unless (defined $template_name) {
+        $template_name = '<none>';
+    }
+
+    print join("\t", $database->{name},
+                     "tmpl: $template_name",
+                     'expires: ' . $database->{expires}),
+            "\n";
+}
+
+sub print_short_help {
+    print "list databases";
+}

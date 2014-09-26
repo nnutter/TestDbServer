@@ -12,12 +12,33 @@ use TestDbServer::Command::CreateTemplateFromDatabase;
 sub list {
     my $self = shift;
 
-    my $templates = $self->app->db_storage->search_template;
-    my @ids;
-    while(my $tmpl = $templates->next) {
-        push @ids, $tmpl->template_id;
+    my $params = $self->req->params->to_hash;
+    my $templates = %$params
+                    ? $self->app->db_storage->search_template(%$params)
+                    : $self->app->db_storage->search_template;
+
+    my(@ids, @render_args);
+    @render_args = ( json => \@ids );
+    try {
+        while(my $tmpl = $templates->next) {
+            push @ids, $tmpl->template_id;
+        }
     }
-    $self->render(json => \@ids);
+    catch {
+        if (ref($_)
+            and
+            $_->isa('DBIx::Class::Exception')
+            and
+            $_ =~ m/(no such column: \w+)/
+        ) {
+            @render_args = ( status => 400, text => $1 );
+        } else {
+            die $_;
+        }
+    }
+    finally {
+        $self->render(@render_args);
+    }
 }
 
 sub get {
@@ -68,7 +89,7 @@ sub _save_file {
     catch {
         if ((ref($_) && $_->isa('Exception::FileExists'))
             ||
-            (ref($_) && $_->isa('DBIx::Class::Exception') && $_ =~ m/UNIQUE constraint failed/i)
+            (ref($_) && $_->isa('DBIx::Class::Exception') && $_ =~ m/unique constraint/i)
         ) {
             $return_code = 409;
         } else {

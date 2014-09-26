@@ -1,0 +1,23 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use TestDbServer::CmdLine qw(get_user_agent url_for assert_success get_template_name_from_id foreach_database_or_template);
+
+if (grep { $_ eq '--short-help'} @ARGV) {
+    print_short_help();
+    exit 0;
+}
+
+foreach_database_or_template('templates', \&print_template_info);
+
+sub print_template_info {
+    my $template = shift;
+
+    print join("\t", @$template{'name','note'}),"\n";
+}
+
+sub print_short_help {
+    print "list templates";
+}

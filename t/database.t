@@ -8,13 +8,11 @@ use DBI;
 
 use TestDbServer::Configuration;
 
-plan tests => 7;
+plan tests => 8;
 
-my $file_storage_path = File::Temp::tempdir( CLEANUP => 1);
 my $db = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
 my $connect_string = 'dbi:SQLite:' . $db->filename;
 my $config = TestDbServer::Configuration->new(
-                    file_storage_path => $file_storage_path,
                     db_connect_string => $connect_string,
                     db_host => 'localhost',
                     db_port => 5434,
@@ -35,12 +33,31 @@ subtest 'list' => sub {
 
     my $db = $app->db_storage;
     @databases = ( $db->create_database( host => 'foo', port => '123', name => 'qwerty', owner => 'me' ),
-                   $db->create_database( host => 'bar', port => '456', name => 'uiop', owner => 'you' ),
+                   $db->create_database( host => 'bar', port => '456', name => 'uiop', owner => 'me' ),
                 );
     my $expected_data = [ map { $_->database_id } @databases ];
     $t->get_ok('/databases')
       ->status_is(200)
       ->json_is($expected_data);
+};
+
+subtest 'search' => sub {
+    plan tests => 11;
+
+    $t->get_ok('/databases?name=qwerty')
+        ->status_is(200)
+        ->json_is([$databases[0]->database_id]);
+
+    $t->get_ok('/databases?owner=me')
+        ->status_is(200)
+        ->json_is([ map { $_->database_id } @databases]);
+
+    $t->get_ok('/databases?host=garbage')
+        ->status_is(200)
+        ->json_is([]);
+
+    $t->get_ok('/databases?garbage=foo')
+        ->status_is(400);
 };
 
 subtest 'get' => sub {

@@ -22,9 +22,11 @@ sub _create_table {
         my($storage, $dbh, @cols) = @_;
 
         my $getter = $class->_create_table_sql_getter($dbh);
-        my $sql = $class->$getter();
-
-        $dbh->do($sql);
+        my $method = $class->can($getter);
+        if ($method) {
+            my $sql = $class->$method();
+            $dbh->do($sql);
+        }
     });
 }
 

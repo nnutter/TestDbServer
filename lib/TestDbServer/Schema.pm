@@ -44,7 +44,7 @@ sub _initialize_sources {
     my @sources = $self->sources();
     $self->log->info('Initializing ' . scalar(@sources) . ' sources');
 
-    $self->storage->dbh->do('PRAGMA foreign_keys = ON');
+    $self->enable_foreign_keys();
 
     foreach my $source ( @sources ) {
         $self->log->info("Initializing source $source");
@@ -130,6 +130,13 @@ sub sql_to_update_last_used_column {
     return $self->_driver_type eq 'SQLite'
             ? q(datetime('now'))
             : 'now()';
+}
+
+sub enable_foreign_keys {
+    my $self = shift;
+    if ($self->_driver_type eq 'SQLite') {
+        $self->storage->dbh->do('PRAGMA foreign_keys = ON');
+    }
 }
 
 sub search_expired_databases {

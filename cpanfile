@@ -13,5 +13,5 @@ requires 'Exception::Class';
 requires 'MooseX::NonMoose';
 requires 'DBIx::Class';
 requires 'DBD::Pg';
-requires 'App::Info:::RDBMS::PostgreSQL';
+requires 'App::Info::RDBMS::PostgreSQL';
 requires 'Data::UUID';

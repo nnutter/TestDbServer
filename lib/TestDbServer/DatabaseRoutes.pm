@@ -13,12 +13,16 @@ sub list {
     $self->_remove_expired_databases();
 
     my $params = $self->req->params->to_hash;
+    $self->app->log->info('list databases: '
+                            . %$params
+                                ? join(', ', map { join(' => ', $_, $params->{$_}) } keys %$params )
+                                : 'no params');
     my $databases = %$params
                     ? $self->app->db_storage->search_database(%$params)
                     : $self->app->db_storage->search_database;
 
-    my(@ids, @render_args);
-    @render_args = ( json => \@ids );
+    my(@ids, %render_args);
+    %render_args = ( json => \@ids );
     try {
         while (my $db = $databases->next) {
             push @ids, $db->database_id;
@@ -31,13 +35,13 @@ sub list {
             and
             $_ =~ m/(no such column: \w+)/
         ) {
-            @render_args = ( status => 400, text => $1 );
+            %render_args = ( status => 400, text => $1 );
         } else {
             die $_;
         }
     }
     finally {
-        $self->render(@render_args);
+        $self->render(%render_args);
     };
 }
 

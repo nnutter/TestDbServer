@@ -17,8 +17,8 @@ sub list {
                     ? $self->app->db_storage->search_template(%$params)
                     : $self->app->db_storage->search_template;
 
-    my(@ids, @render_args);
-    @render_args = ( json => \@ids );
+    my(@ids, %render_args);
+    %render_args = ( json => \@ids );
     try {
         while(my $tmpl = $templates->next) {
             push @ids, $tmpl->template_id;
@@ -31,13 +31,13 @@ sub list {
             and
             $_ =~ m/(no such column: \w+)/
         ) {
-            @render_args = ( status => 400, text => $1 );
+            %render_args = ( status => 400, text => $1 );
         } else {
             die $_;
         }
     }
     finally {
-        $self->render(@render_args);
+        $self->render(%render_args);
     }
 }
 

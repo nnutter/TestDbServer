@@ -15,7 +15,7 @@ my $config = TestDbServer::Configuration->new(
                     db_connect_string => $connect_string,
                     db_user => 'postgres',
                     db_host => 'localhost',
-                    db_port => 5434,
+                    db_port => 5432,
                 );
 
 my $t = Test::Mojo->new('TestDbServer');

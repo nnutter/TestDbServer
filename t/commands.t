@@ -307,7 +307,7 @@ sub new_upload {
 }
 
 sub pg_host { 'localhost' }
-sub pg_port { 5434 }
+sub pg_port { 5432 }
 sub pg_owner { 'genome' }
 sub pg_superuser { 'postgres' }
 

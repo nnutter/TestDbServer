@@ -13,7 +13,7 @@ use warnings;
 plan tests => 4;
 
 my $host = 'localhost';
-my $port = 5434;
+my $port = 5432;
 my $owner = 'genome';
 my $superuser = 'postgres';
 

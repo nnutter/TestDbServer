@@ -1,4 +1,4 @@
-requires 'perl', 'v5.18.2';
+requires 'perl', 'v5.18';
 
 requires 'App::Info::RDBMS::PostgreSQL';
 requires 'Carp';

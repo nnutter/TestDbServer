@@ -12,8 +12,6 @@ requires 'IPC::Run';
 requires 'Mojolicious', '5';
 requires 'Moose', '2.1';
 requires 'MooseX::NonMoose';
-requires 'Sub::Install';
-requires 'Sub::Name';
 
 on develop => sub {
     requires 'Test::Exception';

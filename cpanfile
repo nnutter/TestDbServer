@@ -1,4 +1,4 @@
-requires 'perl', 'v5.18.2';
+requires 'perl', 'v5.10';
 
 requires 'Mojolicious', '5';
 requires 'Carp';

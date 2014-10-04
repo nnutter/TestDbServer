@@ -1,0 +1,9 @@
+addons:
+  postgresql: "9.3"
+language: perl
+perl:
+  - "5.18"
+before_script:
+  - psql -c 'create database test_db_master;' -U postgres
+  - psql -c 'create role genome with login;' -U postgres
+script: prove -lvr t/

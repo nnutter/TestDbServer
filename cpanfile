@@ -16,3 +16,8 @@ requires 'Sub::Install';
 requires 'Sub::Name';
 requires 'Test::Exception';
 requires 'Test::More';
+
+feature 'cli', 'command-line interface' => sub {
+    requires 'LWP';
+    requires 'LWP::Protocol::https';
+};

@@ -14,8 +14,11 @@ requires 'Moose', '2.1';
 requires 'MooseX::NonMoose';
 requires 'Sub::Install';
 requires 'Sub::Name';
-requires 'Test::Exception';
-requires 'Test::More';
+
+on develop => sub {
+    requires 'Test::Exception';
+    requires 'Test::More';
+};
 
 feature 'cli', 'command-line interface' => sub {
     requires 'LWP';

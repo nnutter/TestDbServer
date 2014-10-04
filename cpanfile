@@ -15,3 +15,8 @@ requires 'DBIx::Class';
 requires 'DBD::Pg';
 requires 'App::Info::RDBMS::PostgreSQL';
 requires 'Data::UUID';
+
+feature 'cli', 'command-line interface' => sub {
+    recommends 'LWP';
+    recommends 'LWP::Protocol::https';
+};

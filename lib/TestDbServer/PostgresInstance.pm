@@ -2,6 +2,7 @@ use App::Info::RDBMS::PostgreSQL;
 use Data::UUID;
 
 use TestDbServer::Exceptions;
+use TestDbServer::CommandLineRunner;
 
 package TestDbServer::PostgresInstance;
 
@@ -51,9 +52,18 @@ sub createdb {
         Exception::SuperuserRequired->throw();
     }
 
-    my $output = `$createdb -h $host -p $port -U $superuser -O $owner $name 2>&1`;
-    if ($? != 0) {
-        Exception::CannotCreateDatabase->throw(error => "$createdb failed", output => $output, child_error => $?);
+    my $runner = TestDbServer::CommandLineRunner->new(
+                        $createdb,
+                        '-h', $host,
+                        '-p', $port,
+                        '-U', $superuser,
+                        '-O', $owner,
+                         $name,
+                    );
+    unless ($runner->rv) {
+        Exception::CannotCreateDatabase->throw(error => "$createdb failed",
+                                               output => $runner->output,
+                                               child_error => $runner->child_error);
     }
     return 1;
 }
@@ -75,9 +85,17 @@ sub dropdb {
     my $owner = $self->owner;
     my $name = $self->name;
 
-    my $output = `$dropdb -h $host -p $port -U $owner $name 2>&1`;
-    if ($? != 0) {
-        Exception::CannotDropDatabase->throw(error => "$dropdb failed", output => $output, child_error => $?);
+    my $runner = TestDbServer::CommandLineRunner->new(
+                        $dropdb,
+                        '-h', $host,
+                        '-p', $port,
+                        '-U', $owner,
+                        $name
+                    );
+    unless ($runner->rv) {
+        Exception::CannotDropDatabase->throw(error => "$dropdb failed",
+                                             output => $runner->output,
+                                             child_error => $runner->child_error);
     }
     return 1;
 }
@@ -92,9 +110,18 @@ sub exportdb {
     my $owner = $self->owner;
     my $name = $self->name;
 
-    my $output = qx($pg_dump -h $host -p $port -U $owner -f $filename $name 2>&1);
-    if ($? != 0) {
-        Exception::CannotExportDatabase->throw(error => "$pg_dump failed", output => $output, child_error => $?);
+    my $runner = TestDbServer::CommandLineRunner->new(
+                        $pg_dump,
+                        '-h', $host,
+                        '-p', $port,
+                        '-U', $owner,
+                        '-f', $filename,
+                        $name,
+                     );
+    unless ($runner->rv) {
+        Exception::CannotExportDatabase->throw(error => "$pg_dump failed",
+                                               output => $runner->output,
+                                               child_error => $runner->child_error);
     }
     return 1;
 }
@@ -109,9 +136,19 @@ sub importdb {
     my $owner = $self->owner;
     my $name = $self->name;
 
-    my $output = qx($psql -h $host -p $port -U $owner -d $name -f $filename --set=ON_ERROR_STOP=1 2>&1);
-    if ($? != 0) {
-        Exception::CannotImportDatabase->throw(error => "$psql failed", output => $output, child_error => $?);
+    my $runner = TestDbServer::CommandLineRunner->new(
+                        $psql,
+                        '-h', $host,
+                        '-p', $port,
+                        '-U', $owner,
+                        '-d', $name,
+                        '-f', $filename,
+                        '--set=ON_ERROR_STOP=1',
+                    );
+    unless ($runner->rv) {
+        Exception::CannotImportDatabase->throw(error => "$psql failed",
+                                               output => $runner->output,
+                                               child_error => $runner->child_error);
     }
     return 1;
 }

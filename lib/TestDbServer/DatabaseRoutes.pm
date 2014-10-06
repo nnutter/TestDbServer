@@ -13,12 +13,16 @@ sub list {
     $self->_remove_expired_databases();
 
     my $params = $self->req->params->to_hash;
+    $self->app->log->info('list databases: '
+                            . %$params
+                                ? join(', ', map { join(' => ', $_, $params->{$_}) } keys %$params )
+                                : 'no params');
     my $databases = %$params
                     ? $self->app->db_storage->search_database(%$params)
                     : $self->app->db_storage->search_database;
 
-    my(@ids, @render_args);
-    @render_args = ( json => \@ids );
+    my(@ids, %render_args);
+    %render_args = ( json => \@ids );
     try {
         while (my $db = $databases->next) {
             push @ids, $db->database_id;
@@ -31,13 +35,18 @@ sub list {
             and
             $_ =~ m/(no such column: \w+)/
         ) {
-            @render_args = ( status => 400, text => $1 );
+            %render_args = ( status => 400, text => $1 );
         } else {
             die $_;
         }
     }
     finally {
-        $self->render(@render_args);
+        if (exists($render_args{status}) and $render_args{status} == 400) {
+            $self->app->log->error("list databases failed: $render_args{text}");
+        } else {
+            $self->app->log->info('found ' . scalar($render_args{json}) . ' databases');
+        }
+        $self->render(%render_args);
     };
 }
 
@@ -47,11 +56,15 @@ sub get {
 
     $self->_remove_expired_databases();
 
+    $self->app->log->info("get database $id");
+
     my $schema = $self->app->db_storage();
     my $database = $schema->find_database($id);
     if ($database) {
+        $self->app->log->info("found database $id");
         $self->render(json => _hashref_for_database_obj($database));
     } else {
+        $self->app->log->info("database $id not found");
         $self->render_not_found;
     }
 }
@@ -74,7 +87,7 @@ sub _remove_expired_databases {
             });
         }
         catch {
-            $self->app->log->error("expire database ".$database->database_id.": $_");
+            $self->app->log->error("expire database ".$database->database_id." failed: $_");
         };
     }
 }
@@ -92,12 +105,15 @@ sub create {
     my $self = shift;
 
     if (my $template_id = $self->req->param('based_on')) {
+        $self->app->log->info("create database from template $template_id");
         $self->_create_database_from_template($template_id);
 
     } elsif (my $owner = $self->req->param('owner')) {
+        $self->app->log->info("create database with owner $owner");
         $self->_create_new_database($owner);
 
     } else {
+        $self->app->log->error('create databse with bad params');
         $self->render_not_found;
     }
 }
@@ -149,15 +165,17 @@ sub _create_database_common {
         if (ref($_)
                 && ( $_->isa('Exception::TemplateNotFound') || $_->isa('Exception::CannotOpenFile'))
         ) {
+            $self->app->log->error('template not found');
             $return_code = 404;
 
         } else {
-            $self->app->log->error("_create_database_from_template: $_");
+            $self->app->log->fatal("_create_database_from_template: $_");
             die $_;
         }
     };
 
     if ($database) {
+        $self->app->log->info('created database '.$database->database_id);
         my $response_location = TestDbServer::Utils::id_url_for_request_and_entity_id($self->req, $database->database_id);
         $self->res->headers->location($response_location);
 
@@ -171,6 +189,8 @@ sub _create_database_common {
 sub delete {
     my $self = shift;
     my $id = $self->stash('id');
+
+    $self->app->log->info("delete database $id");
 
     my $schema = $self->app->db_storage;
     my $return_code;
@@ -186,11 +206,13 @@ sub delete {
     }
     catch {
         if (ref($_) && $_->isa('Exception::DatabaseNotFound')) {
+            $self->app->log->error("database $id does not exist");
             $return_code = 404;
         } elsif (ref($_) && $_->isa('Exception::CannotDropDatabase')) {
+            $self->app->log->error("Cannot drop database $id");
             $return_code = 409;
         } else {
-            $self->app->log->error("delete database: $_");
+            $self->app->log->fatal("delete database $id failed: $_");
             die $_;
         }
     };
@@ -207,6 +229,9 @@ sub patch {
     my($return_code, $database);
     try {
         my $ttl = $self->req->param('ttl');
+
+        $self->app->log->info("patch database $id ttl $ttl\n");
+
         if (! $ttl or $ttl < 1) {
             Exception::RequiredParamMissing->throw(params => ['ttl']);
         }
@@ -224,13 +249,15 @@ sub patch {
     }
     catch {
         if (ref($_) && $_->isa('Exception::RequiredParamMissing')) {
+            $self->app->log->error("required param missing: ".join(', ', @{ $_->params }));
             $return_code = 400;
 
         } elsif (ref($_) && $_->isa('Exception::DatabaseNotFound')) {
+            $self->app->log->error("database $id not found");
             $return_code = 404;
 
         } else {
-            $self->app->log->error("delete database: $_");
+            $self->app->log->fatal("patch database failed: $_");
             die $_;
         }
     };

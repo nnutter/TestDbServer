@@ -18,12 +18,8 @@ my $db = File::Temp->new(
     EXLOCK => 0,
 );
 my $connect_string = 'dbi:SQLite:' . $db->filename;
-my $config = TestDbServer::Configuration->new(
-                    db_connect_string => $connect_string,
-                    db_user => 'postgres',
-                    db_host => 'localhost',
-                    db_port => 5432,
-                );
+my $config = TestDbServer::Configuration->new_from_path();
+$config->db_connect_string($connect_string); # weird Postgres-SQLite hybrid
 
 my $t = Test::Mojo->new('TestDbServer');
 my $app = $t->app;

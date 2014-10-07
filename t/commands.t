@@ -8,6 +8,7 @@ use Mojo::Asset::Memory;
 use File::Temp qw();
 
 use TestDbServer::Schema;
+use TestDbServer::Configuration;
 use TestDbServer::PostgresInstance;
 use lib 't/lib';
 use FakeApp;
@@ -306,10 +307,10 @@ sub new_upload {
                         ->filename($name);
 }
 
-sub pg_host { 'localhost' }
-sub pg_port { 5432 }
+sub pg_host { TestDbServer::Configuration->new_from_path->db_host }
+sub pg_port { TestDbServer::Configuration->new_from_path->db_port }
 sub pg_owner { 'genome' }
-sub pg_superuser { 'postgres' }
+sub pg_superuser { TestDbServer::Configuration->new_from_path->db_user }
 
 sub new_pg_instance {
     my $pg = TestDbServer::PostgresInstance->new(

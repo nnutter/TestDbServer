@@ -3,6 +3,7 @@ addons:
 language: perl
 perl:
   - "5.18"
+env: TEST_DB_CONF=test_db_server.development.conf
 before_script:
   - psql -c 'create database test_db_master;' -U postgres
   - psql -c 'create role genome with login;' -U postgres

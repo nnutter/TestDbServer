@@ -1,6 +1,6 @@
 package TestDbServer::Configuration;
 
-use Memoize qw();
+use Memoize qw(memoize);
 use Moose;
 use namespace::autoclean;
 
@@ -20,6 +20,31 @@ sub new_from_app_config {
     }
 
     return $class->SUPER::new(%props);
+}
+
+memoize('new_from_path');
+sub new_from_path {
+    my ($class, $path) = @_;
+
+    $path ||= $ENV{TEST_DB_CONF}
+        or die 'TEST_DB_CONF must be set';
+
+    unless (-f $path) {
+        die "path is not a file: $path";
+    }
+
+    local $@;
+    my $config = do $path;
+    if (!$config && $@) {
+        die "config threw exception: $@";
+    }
+    if (!$config && $!) {
+        die "config load failed: $!";
+    }
+    if (!$config || ref($config) ne 'HASH') {
+        die "invalid config";
+    }
+    return $class->SUPER::new(%$config);
 }
 
 __PACKAGE__->meta->make_immutable;

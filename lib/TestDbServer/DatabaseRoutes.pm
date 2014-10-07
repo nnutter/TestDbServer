@@ -33,7 +33,7 @@ sub list {
             and
             $_->isa('DBIx::Class::Exception')
             and
-            $_ =~ m/(no such column: \w+)/
+            $_ =~ m/(column "\w+" does not exist)/
         ) {
             %render_args = ( status => 400, text => $1 );
         } else {
@@ -59,10 +59,21 @@ sub get {
     $self->app->log->info("get database $id");
 
     my $schema = $self->app->db_storage();
-    my $database = $schema->find_database($id);
+    my($database, $error);
+    try {
+        $database = $schema->find_database($id);
+    } catch {
+        $error = $_;
+    };
+
     if ($database) {
         $self->app->log->info("found database $id");
         $self->render(json => _hashref_for_database_obj($database));
+
+    } elsif ($error) {
+        $self->app->log->error("Cannot get database $id");
+        $self->render(status => 400, text => $error);
+
     } else {
         $self->app->log->info("database $id not found");
         $self->render_not_found;
@@ -170,7 +181,7 @@ sub _create_database_common {
 
         } else {
             $self->app->log->fatal("_create_database_from_template: $_");
-            die $_;
+            $return_code = 400;
         }
     };
 
@@ -213,7 +224,7 @@ sub delete {
             $return_code = 409;
         } else {
             $self->app->log->fatal("delete database $id failed: $_");
-            die $_;
+            $return_code = 400;
         }
     };
 

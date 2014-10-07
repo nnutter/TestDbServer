@@ -12,18 +12,7 @@ use TestDbServer::Configuration;
 
 plan tests => 8;
 
-# On BSD-derived systems the $fh is opened with O_EXLOCK by default which
-# makes SQLite angry.  We could also just use OPEN => 0 but we want the
-# cleanup from UNLINK => 1 which is incompatible with OPEN => 0.
-my $db = File::Temp->new(
-    TEMPLATE => 'testdbserver_testdb_XXXXX',
-    SUFFIX => 'sqlite3',
-    EXLOCK => 0,
-);
-
-my $connect_string = 'dbi:SQLite:' . $db->filename;
 my $config = TestDbServer::Configuration->new_from_path();
-$config->db_connect_string($connect_string); # weird Postgres-SQLite hybrid
 
 my $t = Test::Mojo->new('TestDbServer');
 my $app = $t->app;
@@ -73,7 +62,7 @@ subtest 'search' => sub {
 };
 
 subtest 'get' => sub {
-    plan tests => 12;
+    plan tests => 14;
 
     $t->get_ok('/databases/'.$databases[0]->database_id)
         ->status_is(200)
@@ -86,12 +75,15 @@ subtest 'get' => sub {
         ->json_has('/created')
         ->json_has('/expires');
 
-    $t->get_ok('/databases/garbage')
+    $t->get_ok('/databases/903482394')
         ->status_is(404);
+
+    $t->get_ok('/databases/garbage')
+        ->status_is(400);
 };
 
 subtest 'create from template' => sub {
-    plan tests => 13;
+    plan tests => 15;
 
     my $db = $app->db_storage();
     my $template_owner = 'genome';
@@ -128,8 +120,11 @@ subtest 'create from template' => sub {
          $template->last_used_time,
          'Template last used time was updated');
 
-    $t->post_ok('/databases?based_on=bogus')
+    $t->post_ok('/databases?based_on=347394')
         ->status_is(404, 'Cannot create DB based on bogus template_id');
+
+    $t->post_ok('/databases?based_on=bogus')
+        ->status_is(400, 'Cannot create DB based on bogus template_id');
 };
 
 sub _validate_location_header {
@@ -165,7 +160,7 @@ subtest 'create new' => sub {
 };
 
 subtest 'delete' => sub {
-    plan tests => 6;
+    plan tests => 8;
 
     my $template_owner = 'genome';
     my $test = $t->post_ok("/databases?owner=$template_owner")
@@ -176,8 +171,11 @@ subtest 'delete' => sub {
         ->status_is(204);
 
 
-    $t->delete_ok('/databases/bogus')
+    $t->delete_ok('/databases/99999')
         ->status_is(404);
+
+    $t->delete_ok('/databases/bogus')
+        ->status_is(400);
 };
 
 subtest 'delete while connected' => sub {

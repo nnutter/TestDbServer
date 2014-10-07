@@ -8,6 +8,7 @@ requires 'DBD::SQLite', '1.42';
 requires 'DBI', '1.63';
 requires 'DBIx::Class';
 requires 'Exception::Class';
+requires 'IPC::Run';
 requires 'Mojolicious', '5';
 requires 'Moose', '2.1';
 requires 'MooseX::NonMoose';

@@ -103,7 +103,8 @@ subtest 'export db' => sub {
     ok($dbh->do(q(CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY))),
         'create table in database');
 
-    my(undef, $filename) = File::Temp::tempfile();
+    my ($fh, $filename) = File::Temp::tempfile(UNLINK => 1);
+    $fh->close();
     ok($pg->exportdb($filename), 'export');
     ok(-f $filename, "exported file exists: $filename");
     my $contents = do {

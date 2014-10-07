@@ -7,6 +7,7 @@ use TestDbServer::CommandLineRunner;
 package TestDbServer::PostgresInstance;
 
 use Moose;
+use namespace::autoclean;
 
 has 'host' => (
     is => 'ro',
@@ -152,5 +153,7 @@ sub importdb {
     }
     return 1;
 }
+
+__PACKAGE__->meta->make_immutable;
 
 1;

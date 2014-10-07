@@ -4,13 +4,12 @@ use File::Temp;
 use TestDbServer::PostgresInstance;
 
 use Moose;
+use namespace::autoclean;
 
 has name => ( isa => 'Str', is => 'ro', required => 1 );
 has note => ( isa => 'Maybe[Str]', is => 'ro', required => 1 );
 has database_id => ( isa => 'Str', is => 'ro', required => 1 );
 has schema => ( isa => 'TestDbServer::Schema', is => 'ro', required => 1 );
-
-no Moose;
 
 sub execute {
     my $self = shift;
@@ -52,5 +51,7 @@ sub execute {
 
     return $template->template_id;
 }
+
+__PACKAGE__->meta->make_immutable;
 
 1;

@@ -3,6 +3,7 @@ package TestDbServer::Command::CreateDatabase;
 use TestDbServer::PostgresInstance;
 
 use Moose;
+use namespace::autoclean;
 
 has host => ( isa => 'Str', is => 'ro', required => 1 );
 has port => ( isa => 'Int', is => 'ro', required => 1 );
@@ -10,8 +11,6 @@ has owner => ( isa => 'Maybe[Str]', is => 'ro', required => 1 );
 has template_id => ( isa => 'Maybe[Str]', is => 'ro', required => 1 );
 has superuser => ( isa => 'Str', is => 'ro', required => 1 );
 has schema => (isa => 'TestDbServer::Schema', is => 'ro', required => 1 );
-
-no Moose;
 
 sub execute {
     my $self = shift;
@@ -35,5 +34,7 @@ sub execute {
 
     return $database;
 }
+
+__PACKAGE__->meta->make_immutable;
 
 1;

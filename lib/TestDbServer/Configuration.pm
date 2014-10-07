@@ -1,6 +1,8 @@
 package TestDbServer::Configuration;
 
+use Memoize qw();
 use Moose;
+use namespace::autoclean;
 
 has db_connect_string   => ( is => 'rw' );
 has db_user             => ( is => 'rw' );
@@ -19,5 +21,7 @@ sub new_from_app_config {
 
     return $class->SUPER::new(%props);
 }
+
+__PACKAGE__->meta->make_immutable;
 
 1;

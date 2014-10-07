@@ -4,11 +4,10 @@ use TestDbServer::PostgresInstance;
 use TestDbServer::Exceptions;
 
 use Moose;
+use namespace::autoclean;
 
 has database_id => ( isa => 'Str', is => 'ro', required => 1 );
 has schema => (isa => 'TestDbServer::Schema', is => 'ro', required => 1 );
-
-no Moose;
 
 sub execute {
     my $self = shift;
@@ -31,5 +30,7 @@ sub execute {
 
     return 1;
 }
+
+__PACKAGE__->meta->make_immutable;
 
 1;

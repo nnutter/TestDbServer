@@ -3,14 +3,22 @@ use Mojo::Base -strict;
 use Test::More;
 use Test::Mojo;
 use Mojo::JSON;
-use File::Temp;
+use File::Temp qw();
 use DBI;
 
 use TestDbServer::Configuration;
 
 plan tests => 8;
 
-my $db = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
+# On BSD-derived systems the $fh is opened with O_EXLOCK by default which
+# makes SQLite angry.  We could also just use OPEN => 0 but we want the
+# cleanup from UNLINK => 1 which is incompatible with OPEN => 0.
+my $db = File::Temp->new(
+    TEMPLATE => 'testdbserver_testdb_XXXXX',
+    SUFFIX => 'sqlite3',
+    EXLOCK => 0,
+);
+
 my $connect_string = 'dbi:SQLite:' . $db->filename;
 my $config = TestDbServer::Configuration->new(
                     db_connect_string => $connect_string,

@@ -17,6 +17,7 @@ requires 'namespace::autoclean';
 on develop => sub {
     requires 'Test::Exception';
     requires 'Test::More';
+    requires 'Test::Deep';
 };
 
 feature 'cli', 'command-line interface' => sub {

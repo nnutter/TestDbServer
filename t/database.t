@@ -2,9 +2,11 @@ use Mojo::Base -strict;
 
 use Test::More;
 use Test::Mojo;
+use Test::Deep qw(cmp_deeply supersetof);
 use Mojo::JSON;
 use File::Temp qw();
 use DBI;
+use Data::UUID;
 
 use TestDbServer::Configuration;
 
@@ -27,34 +29,40 @@ my $t = Test::Mojo->new('TestDbServer');
 my $app = $t->app;
 $app->configuration($config);
 
+my $uuid_gen = Data::UUID->new();
+
 my @databases;
 subtest 'list' => sub {
     plan tests => 6;
 
     my $r = $t->get_ok('/databases')
-        ->status_is(200)
-        ->json_is([]);
+        ->status_is(200);
+
+    my $db_list = $r->tx->res->json;
+    is(ref($db_list), 'ARRAY', '/databases is an arrayref');
 
     my $db = $app->db_storage;
-    @databases = ( $db->create_database( host => 'foo', port => '123', name => 'qwerty', owner => 'me' ),
-                   $db->create_database( host => 'bar', port => '456', name => 'uiop', owner => 'me' ),
+    my $owner = $uuid_gen->create_str;
+    @databases = ( $db->create_database( host => 'foo', port => '123', name => $uuid_gen->create_str, owner => $owner ),
+                   $db->create_database( host => 'bar', port => '456', name => $uuid_gen->create_str, owner => $owner ),
                 );
-    my $expected_data = [ map { $_->database_id } @databases ];
-    $t->get_ok('/databases')
-      ->status_is(200)
-      ->json_is($expected_data);
+    $r = $t->get_ok('/databases')
+      ->status_is(200);
+
+    $db_list = $r->tx->res->json;
+    cmp_deeply($db_list, supersetof(map { $_->database_id } @databases), 'Found created databases');
 };
 
 subtest 'search' => sub {
     plan tests => 11;
 
-    $t->get_ok('/databases?name=qwerty')
+    $t->get_ok('/databases?name='.$databases[0]->name)
         ->status_is(200)
         ->json_is([$databases[0]->database_id]);
 
-    $t->get_ok('/databases?owner=me')
+    my $r = $t->get_ok('/databases?owner='.$databases[0]->owner)
         ->status_is(200)
-        ->json_is([ map { $_->database_id } @databases]);
+        ->json_is([ map { $_->database_id } @databases ]);
 
     $t->get_ok('/databases?host=garbage')
         ->status_is(200)
@@ -72,8 +80,8 @@ subtest 'get' => sub {
         ->json_is('/id' => $databases[0]->database_id)
         ->json_is('/host' => 'foo')
         ->json_is('/port' => '123' )
-        ->json_is('/name' => 'qwerty')
-        ->json_is('/owner' => 'me')
+        ->json_is('/name' => $databases[0]->name)
+        ->json_is('/owner' => $databases[0]->owner)
         ->json_is('/template_id' => undef)
         ->json_has('/created')
         ->json_has('/expires');
@@ -87,8 +95,9 @@ subtest 'create from template' => sub {
 
     my $db = $app->db_storage();
     my $template_owner = 'genome';
+    my $template_name = $uuid_gen->create_str;
     my $template_id = do {
-        my $template = $db->create_template(name => 'test template',
+        my $template = $db->create_template(name => $template_name,
                                             sql_script => 'CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY)',
                                             owner => $template_owner,
                                         );

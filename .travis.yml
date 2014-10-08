@@ -8,7 +8,9 @@ perl:
   - "5.16"
   - "5.18"
   - "5.20"
-env: TEST_DB_CONF=test_db_server.testing.conf
+env:
+  - TEST_DB_CONF=test_db_server.testing.conf
+  - PGUSER=postgres
 before_script:
   - make clean
 script: prove -lvr t/

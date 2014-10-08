@@ -60,7 +60,7 @@ subtest save_template => sub {
 
 my @databases;
 subtest save_database => sub {
-    plan tests => 12;
+    plan tests => 11;
 
     my @database_info = (
         { host => 'localhost', port => 123, name => $uuid_gen->create_str, owner => 'bubba', template_id => $templates[0]->template_id },
@@ -78,7 +78,7 @@ subtest save_database => sub {
 
     check_required_attributes_for_save(
         sub { $schema->create_database(@_) },
-        { host => 'localhost', port => 123, name => 'joe', owner => 'bubba', template_id => $templates[0] }
+        { host => 'localhost', port => 123, name => 'joe', owner => 'bubba' }
     );
 
     throws_ok { $schema->create_database(template_id => 'garbage', host => 'h', port => 1, name => 'n', owner => 'o') }

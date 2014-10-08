@@ -37,6 +37,7 @@ sub list {
         ) {
             %render_args = ( status => 400, text => $1 );
         } else {
+            $self->app->log->fatal("list databases exception: $_");
             die $_;
         }
     }

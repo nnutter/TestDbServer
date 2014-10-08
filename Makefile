@@ -17,3 +17,4 @@ clean: remove_old_test_databases genome_user test_db_master sqitch_deploy
 test: clean
 	prove -l
 
+.PHONY: genome_user remove_old_test_databases test_db_master sqitch_deploy clean test

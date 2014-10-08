@@ -1,6 +1,7 @@
 requires 'perl', 'v5.10';
 
 requires 'App::Info::RDBMS::PostgreSQL';
+requires 'App::Sqitch';
 requires 'Carp';
 requires 'Data::UUID';
 requires 'DBD::Pg';

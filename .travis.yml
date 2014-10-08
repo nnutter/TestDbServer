@@ -8,7 +8,7 @@ perl:
   - "5.16"
   - "5.18"
   - "5.20"
-env: TEST_DB_CONF=test_db_server.development.conf
+env: TEST_DB_CONF=test_db_server.testing.conf
 before_script:
   - psql -c 'create database test_db_master;' -U postgres
   - psql -c 'create role genome with login;' -U postgres

@@ -32,25 +32,7 @@ sub connect {
     $class->log || Exception::NotInitialized->throw( error => 'initialized() was not called' );
 
     my $self = $class->SUPER::connect(@_);
-    if ($self) {
-        $self->_initialize_sources();
-    }
     return $self;
-}
-
-sub _initialize_sources {
-    my $self = shift;
-
-    my @sources = $self->sources();
-    $self->log->info('Initializing ' . scalar(@sources) . ' sources');
-
-    $self->enable_foreign_keys();
-
-    foreach my $source ( @sources ) {
-        $self->log->info("Initializing source $source");
-        my $source_class = join('::', __PACKAGE__, 'Result', $source);
-        $source_class->_create_table($self);
-    }
 }
 
 # create_database(), search_database(), find_database(), delete_database()
@@ -111,40 +93,21 @@ sub create_template {
     return $self->resultset('Template')->create(\%params);
 }
 
-# Ugly!
-sub _driver_type {
-    shift->storage->dbh->{Driver}->{Name};
-}
-
 sub sql_to_update_expire_column {
     my($self, $ttl) = @_;
 
-    return $self->_driver_type eq 'SQLite'
-            ? "datetime('now','+$ttl second')"  # SQLite
-            : "now() + interval '$ttl second'"; # PostgreSQL
+    "now() + interval '$ttl second'"; # PostgreSQL
 }
 
 sub sql_to_update_last_used_column {
     my $self = shift;
-
-    return $self->_driver_type eq 'SQLite'
-            ? q(datetime('now'))
-            : 'now()';
-}
-
-sub enable_foreign_keys {
-    my $self = shift;
-    if ($self->_driver_type eq 'SQLite') {
-        $self->storage->dbh->do('PRAGMA foreign_keys = ON');
-    }
+    'now()'; # PostgreSQL
 }
 
 sub search_expired_databases {
     my $self = shift;
 
-    my $criteria = $self->_driver_type eq 'SQLite'
-                    ? q(datetime('now'))
-                    : q(now());
+    my $criteria = 'now()';
 
     return $self->resultset('Database')->search({ expire_time => { '<' => \$criteria }});
 }

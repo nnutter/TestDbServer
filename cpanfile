@@ -4,7 +4,6 @@ requires 'App::Info::RDBMS::PostgreSQL';
 requires 'Carp';
 requires 'Data::UUID';
 requires 'DBD::Pg';
-requires 'DBD::SQLite', '1.42';
 requires 'DBI', '1.63';
 requires 'DBIx::Class';
 requires 'Exception::Class';

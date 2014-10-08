@@ -35,7 +35,7 @@ sub list {
             and
             $_->isa('DBIx::Class::Exception')
             and
-            $_ =~ m/(no such column: \w+)/
+            $_ =~ m/(column "\w+" does not exist)/
         ) {
             %render_args = ( status => 400, text => $1 );
         } else {
@@ -63,11 +63,23 @@ sub get {
 
     my $schema = $self->app->db_storage;
 
-    my $template = $schema->find_template($id);
+    my($template, $error);
+    try {
+        $template = $schema->find_template($id);
+    }
+    catch {
+        $error = $_;
+    };
+
     if ($template) {
         $self->app->log->info("found template $id");
         my %template = map { $_ => $template->$_ } qw(template_id name owner note sql_script create_time last_used_time);
         $self->render(json => \%template);
+
+    } elsif ($error) {
+        $self->app->log->error("Cannot get template $id");
+        $self->render(status => 400, text => $error);
+
     } else {
         $self->app->log->info("template $id not found");
         $self->render_not_found;
@@ -158,13 +170,13 @@ sub _save_based_on {
             $self->app->log->error("database not found: ".$self->param('based_on'));
             $return_code = 404;
 
-        } elsif (ref($_) && $_->isa('DBIx::Class::Exception') && m/UNIQUE constraint failed: db_template\.name/) {
+        } elsif (ref($_) && $_->isa('DBIx::Class::Exception') && m/duplicate key value violates unique constraint/) {
             $self->app->log->error('there is already a template with that name');
             $return_code = 409;
 
         } else {
             $self->app->log->fatal("create template based on: $_");
-            die $_;
+            $return_code = 400;
         }
 
     };
@@ -202,7 +214,7 @@ sub delete {
             $return_code = 404;
         } else {
             $self->app->log->fatal("_create_database_from_template: $_");
-            die $_;
+            $return_code = 400;
         }
     };
 

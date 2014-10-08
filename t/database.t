@@ -2,59 +2,56 @@ use Mojo::Base -strict;
 
 use Test::More;
 use Test::Mojo;
+use Test::Deep qw(cmp_deeply supersetof);
 use Mojo::JSON;
 use File::Temp qw();
 use DBI;
+use Data::UUID;
 
 use TestDbServer::Configuration;
 
 plan tests => 8;
 
-# On BSD-derived systems the $fh is opened with O_EXLOCK by default which
-# makes SQLite angry.  We could also just use OPEN => 0 but we want the
-# cleanup from UNLINK => 1 which is incompatible with OPEN => 0.
-my $db = File::Temp->new(
-    TEMPLATE => 'testdbserver_testdb_XXXXX',
-    SUFFIX => 'sqlite3',
-    EXLOCK => 0,
-);
-
-my $connect_string = 'dbi:SQLite:' . $db->filename;
 my $config = TestDbServer::Configuration->new_from_path();
-$config->db_connect_string($connect_string); # weird Postgres-SQLite hybrid
 
 my $t = Test::Mojo->new('TestDbServer');
 my $app = $t->app;
 $app->configuration($config);
+
+my $uuid_gen = Data::UUID->new();
 
 my @databases;
 subtest 'list' => sub {
     plan tests => 6;
 
     my $r = $t->get_ok('/databases')
-        ->status_is(200)
-        ->json_is([]);
+        ->status_is(200);
+
+    my $db_list = $r->tx->res->json;
+    is(ref($db_list), 'ARRAY', '/databases is an arrayref');
 
     my $db = $app->db_storage;
-    @databases = ( $db->create_database( host => 'foo', port => '123', name => 'qwerty', owner => 'me' ),
-                   $db->create_database( host => 'bar', port => '456', name => 'uiop', owner => 'me' ),
+    my $owner = $uuid_gen->create_str;
+    @databases = ( $db->create_database( host => 'foo', port => '123', name => $uuid_gen->create_str, owner => $owner ),
+                   $db->create_database( host => 'bar', port => '456', name => $uuid_gen->create_str, owner => $owner ),
                 );
-    my $expected_data = [ map { $_->database_id } @databases ];
-    $t->get_ok('/databases')
-      ->status_is(200)
-      ->json_is($expected_data);
+    $r = $t->get_ok('/databases')
+      ->status_is(200);
+
+    $db_list = $r->tx->res->json;
+    cmp_deeply($db_list, supersetof(map { $_->database_id } @databases), 'Found created databases');
 };
 
 subtest 'search' => sub {
     plan tests => 11;
 
-    $t->get_ok('/databases?name=qwerty')
+    $t->get_ok('/databases?name='.$databases[0]->name)
         ->status_is(200)
         ->json_is([$databases[0]->database_id]);
 
-    $t->get_ok('/databases?owner=me')
+    my $r = $t->get_ok('/databases?owner='.$databases[0]->owner)
         ->status_is(200)
-        ->json_is([ map { $_->database_id } @databases]);
+        ->json_is([ map { $_->database_id } @databases ]);
 
     $t->get_ok('/databases?host=garbage')
         ->status_is(200)
@@ -65,30 +62,34 @@ subtest 'search' => sub {
 };
 
 subtest 'get' => sub {
-    plan tests => 12;
+    plan tests => 14;
 
     $t->get_ok('/databases/'.$databases[0]->database_id)
         ->status_is(200)
         ->json_is('/id' => $databases[0]->database_id)
         ->json_is('/host' => 'foo')
         ->json_is('/port' => '123' )
-        ->json_is('/name' => 'qwerty')
-        ->json_is('/owner' => 'me')
+        ->json_is('/name' => $databases[0]->name)
+        ->json_is('/owner' => $databases[0]->owner)
         ->json_is('/template_id' => undef)
         ->json_has('/created')
         ->json_has('/expires');
 
-    $t->get_ok('/databases/garbage')
+    $t->get_ok('/databases/903482394')
         ->status_is(404);
+
+    $t->get_ok('/databases/garbage')
+        ->status_is(400);
 };
 
 subtest 'create from template' => sub {
-    plan tests => 13;
+    plan tests => 15;
 
     my $db = $app->db_storage();
-    my $template_owner = 'genome';
+    my $template_owner = $config->test_db_owner;
+    my $template_name = $uuid_gen->create_str;
     my $template_id = do {
-        my $template = $db->create_template(name => 'test template',
+        my $template = $db->create_template(name => $template_name,
                                             sql_script => 'CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY)',
                                             owner => $template_owner,
                                         );
@@ -119,8 +120,11 @@ subtest 'create from template' => sub {
          $template->last_used_time,
          'Template last used time was updated');
 
-    $t->post_ok('/databases?based_on=bogus')
+    $t->post_ok('/databases?based_on=347394')
         ->status_is(404, 'Cannot create DB based on bogus template_id');
+
+    $t->post_ok('/databases?based_on=bogus')
+        ->status_is(400, 'Cannot create DB based on bogus template_id');
 };
 
 sub _validate_location_header {
@@ -138,7 +142,7 @@ sub _validate_location_header {
 subtest 'create new' => sub {
     plan tests => 9;
 
-    my $template_owner = 'genome';
+    my $template_owner = $config->test_db_owner;
 
     my $test =
         $t->post_ok("/databases?owner=$template_owner")
@@ -156,9 +160,9 @@ subtest 'create new' => sub {
 };
 
 subtest 'delete' => sub {
-    plan tests => 6;
+    plan tests => 8;
 
-    my $template_owner = 'genome';
+    my $template_owner = $config->test_db_owner;
     my $test = $t->post_ok("/databases?owner=$template_owner")
             ->status_is(201);
 
@@ -167,14 +171,17 @@ subtest 'delete' => sub {
         ->status_is(204);
 
 
-    $t->delete_ok('/databases/bogus')
+    $t->delete_ok('/databases/99999')
         ->status_is(404);
+
+    $t->delete_ok('/databases/bogus')
+        ->status_is(400);
 };
 
 subtest 'delete while connected' => sub {
     plan tests => 7;
 
-    my $template_owner = 'genome';
+    my $template_owner = $config->test_db_owner;
     my $test = $t->post_ok("/databases?owner=$template_owner")
             ->status_is(201);
 
@@ -193,7 +200,7 @@ subtest 'delete while connected' => sub {
 subtest 'update expire time' => sub {
    plan tests => 15;
 
-    my $template_owner = 'genome';
+    my $template_owner = $config->test_db_owner;
 
     my $test =
         $t->post_ok("/databases?owner=$template_owner")

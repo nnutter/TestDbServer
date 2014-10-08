@@ -17,7 +17,7 @@ my $config = TestDbServer::Configuration->new_from_path();
 my $host = $config->db_host;
 my $port = $config->db_port;
 my $superuser = $config->db_user;
-my $owner = 'genome';
+my $owner = $config->test_db_owner;
 
 subtest 'create connect delete' => sub {
     plan tests => 6;

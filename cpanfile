@@ -1,10 +1,10 @@
 requires 'perl', 'v5.10';
 
 requires 'App::Info::RDBMS::PostgreSQL';
+requires 'App::Sqitch';
 requires 'Carp';
 requires 'Data::UUID';
 requires 'DBD::Pg';
-requires 'DBD::SQLite', '1.42';
 requires 'DBI', '1.63';
 requires 'DBIx::Class';
 requires 'Exception::Class';
@@ -17,6 +17,7 @@ requires 'namespace::autoclean';
 on develop => sub {
     requires 'Test::Exception';
     requires 'Test::More';
+    requires 'Test::Deep';
 };
 
 feature 'cli', 'command-line interface' => sub {

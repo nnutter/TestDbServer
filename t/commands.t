@@ -13,6 +13,7 @@ use TestDbServer::PostgresInstance;
 use lib 't/lib';
 use FakeApp;
 use DBI;
+use Data::UUID;
 
 use TestDbServer::Command::SaveTemplateFile;
 use TestDbServer::Command::CreateTemplateFromDatabase;
@@ -20,6 +21,10 @@ use TestDbServer::Command::CreateDatabase;
 use TestDbServer::Command::CreateDatabaseFromTemplate;
 use TestDbServer::Command::DeleteTemplate;
 use TestDbServer::Command::DeleteDatabase;
+
+my $config = TestDbServer::Configuration->new_from_path();
+my $schema = create_new_schema($config);
+my $uuid_gen = Data::UUID->new();
 
 plan tests => 7;
 
@@ -29,11 +34,9 @@ subtest 'save template file' => sub {
     my $upload = new_upload( my $file_name = File::Temp::tmpnam(),
                              my $file_contents = "This is the test contents\n");
 
-    my $schema = new_schema();
-
     my $command = TestDbServer::Command::SaveTemplateFile->new(
-                        name => $file_name,
-                        owner => 'bob',
+                        name => $uuid_gen->create_str,
+                        owner => $config->test_db_owner,
                         note => 'test note',
                         upload => $upload,
                         schema => $schema,
@@ -50,10 +53,8 @@ subtest 'save template file' => sub {
 subtest 'create template from database' => sub {
     plan tests => 5;
 
-    my $app = FakeApp->new();
     my $pg = new_pg_instance();
 
-    my $schema = new_schema();
     my $base_template_name = File::Temp::tmpnam();
 
     my $base_template = $schema->create_template(name => $base_template_name,
@@ -95,14 +96,12 @@ subtest 'create template from database' => sub {
 subtest 'create database' => sub {
     plan tests => 6;
 
-    my $schema = new_schema();
-
     # blank database
     my $create_blank_db_cmd = TestDbServer::Command::CreateDatabase->new(
-                                host => pg_host(),
-                                port => pg_port(),
-                                owner => pg_owner(),
-                                superuser => pg_superuser(),
+                                host => $config->db_host,
+                                port => $config->db_port,
+                                owner => $config->test_db_owner,
+                                superuser => $config->db_user,
                                 template_id => undef,
                                 schema => $schema,
                             );
@@ -121,15 +120,15 @@ subtest 'create database' => sub {
 
     # with a template ID
     my $template = $schema->create_template(
-                                name => 'foo',
-                                owner => pg_owner(),
+                                name => $uuid_gen->create_str,
+                                owner => $config->test_db_owner,
                                 sql_script => '',
                             );
     my $create_db_cmd = TestDbServer::Command::CreateDatabase->new(
-                                host => pg_host(),
-                                port => pg_port(),
-                                owner => pg_owner(),
-                                superuser => pg_superuser(),
+                                host => $config->db_host,
+                                port => $config->db_port,
+                                owner => $config->test_db_owner,
+                                superuser => $config->db_user,
                                 template_id => $template->template_id,
                                 schema => $schema,
                             );
@@ -149,20 +148,18 @@ subtest 'create database' => sub {
 subtest 'create database from template' => sub {
     plan tests => 6;
 
-    my $schema = new_schema();
-
     my $sql_script = 'CREATE TABLE foo(foo_id integer NOT NULL PRIMARY KEY)';
 
     my $template = $schema->create_template(
-                                name => 'foo',
-                                owner => pg_owner(),
+                                name => $uuid_gen->create_str,
+                                owner => $config->test_db_owner,
                                 sql_script => $sql_script,
                             );
 
     my $cmd = TestDbServer::Command::CreateDatabaseFromTemplate->new(
-                            host => pg_host(),
-                            port => pg_port(),
-                            superuser => pg_superuser(),
+                            host => $config->db_host,
+                            port => $config->db_port,
+                            superuser => $config->db_user,
                             schema => $schema,
                             template_id => $template->template_id,
                         );
@@ -187,20 +184,20 @@ subtest 'create database from template' => sub {
     ok($db_pg->dropdb, 'drop db');
 
     throws_ok { TestDbServer::Command::CreateDatabaseFromTemplate->new(
-                    host => pg_host(),
-                    port => pg_port(),
-                    superuser => pg_superuser(),
+                    host => $config->db_host,
+                    port => $config->db_port,
+                    superuser => $config->db_user,
                     schema => $schema);
                 }
         'Exception::RequiredParamMissing',
         'instantiation without owner and template_id fails';
 
     throws_ok { TestDbServer::Command::CreateDatabaseFromTemplate->new(
-                    host => pg_host(),
-                    port => pg_port(),
-                    superuser => pg_superuser(),
+                    host => $config->db_host,
+                    port => $config->db_port,
+                    superuser => $config->db_user,
                     schema => $schema,
-                    template_id => 'bogus'
+                    template_id => 9999,
                   )->execute();
                }
         'Exception::TemplateNotFound',
@@ -212,8 +209,6 @@ subtest 'delete template' => sub {
 
     my $upload = new_upload( my $file_name = File::Temp::tmpnam(),
                              my $file_contents = "This is the test contents\n");
-
-    my $schema = new_schema();
 
     ok(my $template_id = TestDbServer::Command::SaveTemplateFile->new(
                 name => $file_name,
@@ -238,13 +233,11 @@ subtest 'delete template' => sub {
 subtest 'delete database' => sub {
     plan tests => 5;
 
-    my $schema = new_schema();
-
     my $database = TestDbServer::Command::CreateDatabase->new(
-                            host => pg_host(),
-                            port => pg_port(),
-                            owner => pg_owner(),
-                            superuser => pg_superuser(),
+                            host => $config->db_host,
+                            port => $config->db_port,
+                            owner => $config->test_db_owner,
+                            superuser => $config->db_user,
                             template_id => undef,
                             schema => $schema,
                     )->execute();
@@ -269,13 +262,11 @@ subtest 'delete database' => sub {
 subtest 'delete with connections' => sub {
     plan tests => 5;
 
-    my $schema = new_schema();
-
     my $database = TestDbServer::Command::CreateDatabase->new(
-                            host => pg_host(),
-                            port => pg_port(),
-                            owner => pg_owner(),
-                            superuser => pg_superuser(),
+                            host => $config->db_host,
+                            port => $config->db_port,
+                            owner => $config->test_db_owner,
+                            superuser => $config->db_user,
                             template_id => undef,
                             schema => $schema,
                     )->execute();
@@ -307,34 +298,24 @@ sub new_upload {
                         ->filename($name);
 }
 
-sub pg_host { TestDbServer::Configuration->new_from_path->db_host }
-sub pg_port { TestDbServer::Configuration->new_from_path->db_port }
-sub pg_owner { 'genome' }
-sub pg_superuser { TestDbServer::Configuration->new_from_path->db_user }
-
 sub new_pg_instance {
     my $pg = TestDbServer::PostgresInstance->new(
-            host => pg_host(),
-            port => pg_port(),
-            owner => pg_owner(),
-            superuser => pg_superuser(),
+            host => $config->db_host,
+            port => $config->db_port,
+            owner => $config->test_db_owner,
+            superuser => $config->db_user,
         );
     $pg->createdb();
     return $pg;
 }
 
 
-sub new_schema {
+sub create_new_schema {
+    my $config = shift;
+
     my $app = FakeApp->new();
     TestDbServer::Schema->initialize($app);
 
-    # On BSD-derived systems the $fh is opened with O_EXLOCK by default which
-    # makes SQLite angry.  We could also just use OPEN => 0 but we want the
-    # cleanup from UNLINK => 1 which is incompatible with OPEN => 0.
-    my ($fh, $sqlite_file) = File::Temp::tempfile('command_t_XXXX',
-        SUFFIX => '.sqlite3', UNLINK => 1, EXLOCK => 0);
-    $fh->close();
-
-    return TestDbServer::Schema->connect("dbi:SQLite:dbname=$sqlite_file");
+    return TestDbServer::Schema->connect($config->db_connect_string, $config->db_user, $config->db_password);
 }
 

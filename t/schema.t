@@ -2,7 +2,9 @@ use TestDbServer::Schema;
 
 use Test::More;
 use Test::Exception;
+use Test::Deep qw(cmp_deeply supersetof);
 use File::Temp;
+use Data::UUID;
 
 use lib 't/lib';
 use FakeApp;
@@ -10,20 +12,19 @@ use FakeApp;
 use strict;
 use warnings;
 
-plan tests => 10;
+use TestDbServer::Configuration;
 
-my($schema, $temp_db_file);
+plan tests => 9;
 
-# initialize
+my $config = TestDbServer::Configuration->new_from_path();
+my $uuid_gen = Data::UUID->new;
 
+my $schema;
 subtest initialize => sub {
-    plan tests => 5;
+    plan tests => 3;
 
-    $temp_db_file = File::Temp->new(TEMPLATE => 'dbschema-sqliteXXXX', SUFFIX => '.sqlite3');
-    $temp_db_file->close();
-    my $connect_string = 'dbi:SQLite:' . $temp_db_file->filename;
-
-    throws_ok { TestDbServer::Schema->connect($connect_string) }
+    my $connect_string = $config->db_connect_string;
+    throws_ok { TestDbServer::Schema->connect($connect_string, $config->db_user, $config->db_password) }
         'Exception::NotInitialized',
         'Cannot call connect without initialize() first';
 
@@ -31,26 +32,23 @@ subtest initialize => sub {
 
     ok( TestDbServer::Schema->initialize($fake_app), 'Initialize schema');
 
-    $schema = TestDbServer::Schema->connect($connect_string);
+    $schema = TestDbServer::Schema->connect($connect_string, $config->db_user, $config->db_password);
     ok($schema, 'Connect schema');
-
-    ok(has_table($schema, 'db_template'), 'Table db_template_exists');
-    ok(has_table($schema, 'live_database'), 'Table live_database exists');
 };
 
 my @templates;
 subtest save_template => sub {
     plan tests => 6;
 
-    my $template_1 = $schema->create_template(name => 'template 1', owner => 'bubba', sql_script => '', note => 'hi there');
+    my $template_1 = $schema->create_template(name => $uuid_gen->create_str, owner => 'bubba', sql_script => '', note => 'hi there');
     ok($template_1,'Save template with a note');
     push @templates, $template_1;
 
-    my $template_2 = $schema->create_template(name => 'template_2', owner => 'bubba', sql_script => '');
+    my $template_2 = $schema->create_template(name => $uuid_gen->create_str, owner => 'bubba', sql_script => '');
     ok($template_2, 'Save template without a note');
     push @templates, $template_2;
 
-    throws_ok { $schema->create_template(name => 'template 1', owner => 'bubba', sql_script => '', note => 'garbage') }
+    throws_ok { $schema->create_template(name => $template_1->name, owner => 'bubba', sql_script => '', note => 'garbage') }
         'DBIx::Class::Exception',
         'Cannot save_template() with duplicate name';
 
@@ -62,14 +60,14 @@ subtest save_template => sub {
 
 my @databases;
 subtest save_database => sub {
-    plan tests => 12;
+    plan tests => 11;
 
     my @database_info = (
-        { host => 'localhost', port => 123, name => 'joe', owner => 'bubba', template_id => $templates[0]->template_id },
-        { host => 'localhost', port => 123, name => 'bob', owner => 'bubba', template_id => $templates[0]->template_id },
-        { host => 'other', port => 123, name => 'bob', owner => 'bubba', template_id => $templates[0]->template_id },
-        { host => 'localhost', port => 456, name => 'bob', owner => 'bubba', template_id => $templates[0]->template_id },
-        { host => 'other', port => 999, name => 'frank', owner => 'bubba', template_id => $templates[1]->template_id },
+        { host => 'localhost', port => 123, name => $uuid_gen->create_str, owner => 'bubba', template_id => $templates[0]->template_id },
+        { host => 'localhost', port => 123, name => $uuid_gen->create_str, owner => 'bubba', template_id => $templates[0]->template_id },
+        { host => 'other', port => 123, name => $uuid_gen->create_str, owner => 'bubba', template_id => $templates[0]->template_id },
+        { host => 'localhost', port => 456, name => $uuid_gen->create_str, owner => 'bubba', template_id => $templates[0]->template_id },
+        { host => 'other', port => 999, name => $uuid_gen->create_str, owner => 'bubba', template_id => $templates[1]->template_id },
     );
 
     for (my $i = 0; $i < @database_info; $i++) {
@@ -80,7 +78,7 @@ subtest save_database => sub {
 
     check_required_attributes_for_save(
         sub { $schema->create_database(@_) },
-        { host => 'localhost', port => 123, name => 'joe', owner => 'bubba', template_id => $templates[0] }
+        { host => 'localhost', port => 123, name => 'joe', owner => 'bubba' }
     );
 
     throws_ok { $schema->create_database(template_id => 'garbage', host => 'h', port => 1, name => 'n', owner => 'o') }
@@ -130,29 +128,21 @@ subtest get_database => sub {
 };
 
 subtest all_get_templates => sub {
-    plan tests => 2;
+    plan tests => 1;
 
-    my $got_templates = $schema->search_template();
-    _assert_all_matching($got_templates, \@templates, 'template');
+    my @got_templates = $schema->search_template();
+    cmp_deeply([ map { $_->template_id } @got_templates ],
+                supersetof(map { $_->template_id } @templates),
+                'found expected templates');
 };
 
 subtest get_all_databases => sub {
-    plan tests => 2;
+    plan tests => 1;
 
-    my $got_databases = $schema->search_database();
-    _assert_all_matching($got_databases, \@databases, 'database');
-};
-
-subtest count => sub {
-    plan tests => 2;
-
-    my $count;
-
-    $count = $schema->search_template();
-    is($count->count, scalar(@templates), 'count templates');
-
-    $count = $schema->search_database();
-    is($count->count, scalar(@databases), 'count databases');
+    my @got_databases = $schema->search_database();
+    cmp_deeply([ map { $_->database_id } @got_databases ],
+                supersetof(map { $_->database_id } @databases),
+                'found expected databases');
 };
 
 # $databases[2] is linked to $templates[1]
@@ -187,37 +177,4 @@ sub delete_thing {
 
     my $find_sub = "find_${thing_type}";
     ok(! $schema->$find_sub($id), "$thing_type was deleted");
-}
-
-
-sub _assert_all_matching {
-    my($got_resultset, $expected_list, $label) = @_;
-
-    my %got;
-    my $id_method = "${label}_id";
-    while(my $got = $got_resultset->next) {
-        my $id = $got->$id_method();
-        $got{$id} = 1;
-    }
-
-    is(scalar( keys %got ), scalar(@$expected_list), 'Got expected number of items');
-
-    foreach my $expected ( @$expected_list ) {
-        my $id = $expected->$id_method;
-        unless (delete $got{$id}) {
-            ok(0, "${label}_id $id in result set");
-        }
-    }
-
-    is(scalar( keys %got ), 0, "Found all expected ${label}s");
-}
-
-sub has_table {
-    my $schema = shift;
-    my $table_name = shift;
-
-    my $dbh = $schema->storage->dbh;
-    my $sth = $dbh->prepare(q(select * from sqlite_master where type = 'table' and tbl_name = ?));
-    $sth->execute($table_name);
-    return $sth->fetchrow_hashref;
 }

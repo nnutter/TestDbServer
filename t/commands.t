@@ -309,7 +309,7 @@ sub new_upload {
 
 sub pg_host { TestDbServer::Configuration->new_from_path->db_host }
 sub pg_port { TestDbServer::Configuration->new_from_path->db_port }
-sub pg_owner { 'genome' }
+sub pg_owner { TestDbServer::Configuration->new_from_path->test_db_owner }
 sub pg_superuser { TestDbServer::Configuration->new_from_path->db_user }
 
 sub new_pg_instance {

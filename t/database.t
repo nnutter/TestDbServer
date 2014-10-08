@@ -86,7 +86,7 @@ subtest 'create from template' => sub {
     plan tests => 15;
 
     my $db = $app->db_storage();
-    my $template_owner = 'genome';
+    my $template_owner = $config->test_db_owner;
     my $template_name = $uuid_gen->create_str;
     my $template_id = do {
         my $template = $db->create_template(name => $template_name,
@@ -142,7 +142,7 @@ sub _validate_location_header {
 subtest 'create new' => sub {
     plan tests => 9;
 
-    my $template_owner = 'genome';
+    my $template_owner = $config->test_db_owner;
 
     my $test =
         $t->post_ok("/databases?owner=$template_owner")
@@ -162,7 +162,7 @@ subtest 'create new' => sub {
 subtest 'delete' => sub {
     plan tests => 8;
 
-    my $template_owner = 'genome';
+    my $template_owner = $config->test_db_owner;
     my $test = $t->post_ok("/databases?owner=$template_owner")
             ->status_is(201);
 
@@ -181,7 +181,7 @@ subtest 'delete' => sub {
 subtest 'delete while connected' => sub {
     plan tests => 7;
 
-    my $template_owner = 'genome';
+    my $template_owner = $config->test_db_owner;
     my $test = $t->post_ok("/databases?owner=$template_owner")
             ->status_is(201);
 
@@ -200,7 +200,7 @@ subtest 'delete while connected' => sub {
 subtest 'update expire time' => sub {
    plan tests => 15;
 
-    my $template_owner = 'genome';
+    my $template_owner = $config->test_db_owner;
 
     my $test =
         $t->post_ok("/databases?owner=$template_owner")

@@ -2,7 +2,8 @@ package TestDbServer::Schema;
 use parent 'DBIx::Class::Schema';
 
 use TestDbServer::Exceptions;
-
+use strict;
+use warnings;
 
 __PACKAGE__->load_namespaces();
 
@@ -78,21 +79,6 @@ sub _sub_creator {
     };
 }
         
-
-sub create_database {
-    my $self = shift;
-    my %params = @_;
-
-    return $self->resultset('Database')->create(\%params);
-}
-
-sub create_template {
-    my $self = shift;
-    my %params = @_;
-
-    return $self->resultset('Template')->create(\%params);
-}
-
 sub sql_to_update_expire_column {
     my($self, $ttl) = @_;
 

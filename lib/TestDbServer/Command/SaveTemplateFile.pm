@@ -4,15 +4,13 @@ use File::Basename;
 use Try::Tiny;
 
 use Moose;
+use namespace::autoclean;
 
 has name => ( isa => 'Str', is => 'ro', required => 1 );
 has owner => ( isa => 'Str', is => 'ro', required => 1 );
 has note => ( isa => 'Maybe[Str]', is => 'ro', required => 1 );
 has upload => ( isa => 'Mojo::Upload', is => 'ro', required => 1 );
 has schema => ( isa => 'TestDbServer::Schema', is => 'ro', required => 1 );
-
-no Moose;
-
 
 sub execute {
     my $self = shift;
@@ -26,5 +24,7 @@ sub execute {
     my $template_id = $template->template_id;
     return $template_id;
 }
+
+__PACKAGE__->meta->make_immutable;
 
 1;

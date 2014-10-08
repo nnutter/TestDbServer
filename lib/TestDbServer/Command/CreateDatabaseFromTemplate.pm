@@ -7,13 +7,12 @@ use TestDbServer::Command::CreateDatabase;
 use TestDbServer::Exceptions;
 
 use Moose;
+use namespace::autoclean;
 
 extends 'TestDbServer::Command::CreateDatabase';
 
 has '+template_id' => ( isa => 'Str', is => 'ro', required => 1 );
 has '+owner' => ( isa => 'Maybe[Str]', is => 'ro', required => 0 );
-
-no Moose;
 
 sub BUILDARGS {
     my($class, %params) = @_;
@@ -69,5 +68,7 @@ sub execute {
 
     return $database;
 }
+
+__PACKAGE__->meta->make_immutable;
 
 1;

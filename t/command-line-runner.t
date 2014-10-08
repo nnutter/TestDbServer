@@ -11,7 +11,7 @@ subtest 'simple command' => sub {
     plan tests => 4;
 
     my $expected_output = 'hello';
-    my $runner = TestDbServer::CommandLineRunner->new('/bin/echo', $expected_output);
+    my $runner = TestDbServer::CommandLineRunner->new('echo', $expected_output);
     ok($runner, 'Create CommandLineRunner for echo');
     ok($runner->rv, 'ran ok');
     is($runner->child_error, 0, 'child error');
@@ -21,7 +21,7 @@ subtest 'simple command' => sub {
 subtest 'failing command' => sub {
     plan tests => 2;
 
-    my $runner = TestDbServer::CommandLineRunner->new('/bin/false');
+    my $runner = TestDbServer::CommandLineRunner->new('false');
     ok(! $runner->rv, 'rv is false');
     ok($runner->child_error, 'child error is true');
 };

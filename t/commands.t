@@ -5,9 +5,10 @@ use Test::Exception;
 use Mojo::Upload;
 use Mojo::Asset::Memory;
 
-use File::Temp;
+use File::Temp qw();
 
 use TestDbServer::Schema;
+use TestDbServer::Configuration;
 use TestDbServer::PostgresInstance;
 use lib 't/lib';
 use FakeApp;
@@ -306,10 +307,10 @@ sub new_upload {
                         ->filename($name);
 }
 
-sub pg_host { 'localhost' }
-sub pg_port { 5434 }
+sub pg_host { TestDbServer::Configuration->new_from_path->db_host }
+sub pg_port { TestDbServer::Configuration->new_from_path->db_port }
 sub pg_owner { 'genome' }
-sub pg_superuser { 'postgres' }
+sub pg_superuser { TestDbServer::Configuration->new_from_path->db_user }
 
 sub new_pg_instance {
     my $pg = TestDbServer::PostgresInstance->new(
@@ -326,8 +327,14 @@ sub new_pg_instance {
 sub new_schema {
     my $app = FakeApp->new();
     TestDbServer::Schema->initialize($app);
-    
-    my(undef,$sqlite_file) = File::Temp::tempfile('command_t_XXXX', SUFFIX => '.sqlite3', UNLINK => 1);
-    return TestDbServer::Schema->connect("dbi:SQLite:dbname=$sqlite_file", '','');
+
+    # On BSD-derived systems the $fh is opened with O_EXLOCK by default which
+    # makes SQLite angry.  We could also just use OPEN => 0 but we want the
+    # cleanup from UNLINK => 1 which is incompatible with OPEN => 0.
+    my ($fh, $sqlite_file) = File::Temp::tempfile('command_t_XXXX',
+        SUFFIX => '.sqlite3', UNLINK => 1, EXLOCK => 0);
+    $fh->close();
+
+    return TestDbServer::Schema->connect("dbi:SQLite:dbname=$sqlite_file");
 }
 

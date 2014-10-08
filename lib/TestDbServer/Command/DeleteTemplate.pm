@@ -3,11 +3,10 @@ package TestDbServer::Command::DeleteTemplate;
 use TestDbServer::Exceptions;
 
 use Moose;
+use namespace::autoclean;
 
 has template_id => ( isa => 'Str', is => 'ro', required => 1 );
 has schema => (isa => 'TestDbServer::Schema', is => 'ro', required => 1 );
-
-no Moose;
 
 sub execute {
     my $self = shift;
@@ -19,5 +18,7 @@ sub execute {
 
     $template->delete();
 }
+
+__PACKAGE__->meta->make_immutable;
 
 1;

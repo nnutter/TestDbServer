@@ -4,19 +4,22 @@ use Test::More;
 use Test::Mojo;
 use Mojo::JSON;
 
-use File::Temp;
+use File::Temp qw();
 
 use TestDbServer::Configuration;
 plan tests => 7;
 
-my $db = File::Temp->new(TEMPLATE => 'testdbserver_testdb_XXXXX', SUFFIX => 'sqlite3');
+# On BSD-derived systems the $fh is opened with O_EXLOCK by default which
+# makes SQLite angry.  We could also just use OPEN => 0 but we want the
+# cleanup from UNLINK => 1 which is incompatible with OPEN => 0.
+my $db = File::Temp->new(
+    TEMPLATE => 'testdbserver_testdb_XXXXX',
+    SUFFIX => 'sqlite3',
+    EXLOCK => 0,
+);
 my $connect_string = 'dbi:SQLite:' . $db->filename;
-my $config = TestDbServer::Configuration->new(
-                    db_connect_string => $connect_string,
-                    db_user => 'postgres',
-                    db_host => 'localhost',
-                    db_port => 5434,
-                );
+my $config = TestDbServer::Configuration->new_from_path();
+$config->db_connect_string($connect_string); # weird Postgres-SQLite hybrid
 
 my $t = Test::Mojo->new('TestDbServer');
 my $app = $t->app;

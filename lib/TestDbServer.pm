@@ -4,6 +4,7 @@ use TestDbServer::Configuration;
 package TestDbServer;
 
 use Moose;
+use namespace::autoclean;
 use MooseX::NonMoose;
 extends 'Mojolicious';
 
@@ -68,5 +69,7 @@ sub host_and_port_for_created_database {
     my $config = $self->configuration;
     return ( $config->db_host, $config->db_port );
 }
+
+__PACKAGE__->meta->make_immutable;
 
 1;

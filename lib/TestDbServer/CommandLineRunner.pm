@@ -3,6 +3,7 @@ package TestDbServer::CommandLineRunner;
 use IPC::Run;
 
 use Moose;
+use namespace::autoclean;
 
 has cmdline => (
     is => 'ro',
@@ -47,5 +48,7 @@ sub BUILD {
     $self->rv($rv);
     $self->output($output);
 }
+
+__PACKAGE__->meta->make_immutable;
 
 1;

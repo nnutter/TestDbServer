@@ -5,6 +5,7 @@ use Test::Exception;
 use DBI;
 use File::Temp;
 
+use TestDbServer::Configuration;
 use TestDbServer::PostgresInstance;
 
 use strict;
@@ -12,10 +13,11 @@ use warnings;
 
 plan tests => 4;
 
-my $host = 'localhost';
-my $port = 5434;
+my $config = TestDbServer::Configuration->new_from_path();
+my $host = $config->db_host;
+my $port = $config->db_port;
+my $superuser = $config->db_user;
 my $owner = 'genome';
-my $superuser = 'postgres';
 
 subtest 'create connect delete' => sub {
     plan tests => 6;
@@ -103,7 +105,8 @@ subtest 'export db' => sub {
     ok($dbh->do(q(CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY))),
         'create table in database');
 
-    my(undef, $filename) = File::Temp::tempfile();
+    my ($fh, $filename) = File::Temp::tempfile(UNLINK => 1);
+    $fh->close();
     ok($pg->exportdb($filename), 'export');
     ok(-f $filename, "exported file exists: $filename");
     my $contents = do {

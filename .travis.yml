@@ -1,0 +1,15 @@
+addons:
+  postgresql: "9.3"
+language: perl
+perl:
+  - "5.10"
+  - "5.12"
+  - "5.14"
+  - "5.16"
+  - "5.18"
+  - "5.20"
+env: TEST_DB_CONF=test_db_server.development.conf
+before_script:
+  - psql -c 'create database test_db_master;' -U postgres
+  - psql -c 'create role genome with login;' -U postgres
+script: prove -lvr t/

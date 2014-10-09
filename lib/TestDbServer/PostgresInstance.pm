@@ -83,14 +83,14 @@ sub dropdb {
 
     my $host = $self->host;
     my $port = $self->port;
-    my $owner = $self->owner;
+    my $superuser = $self->superuser;
     my $name = $self->name;
 
     my $runner = TestDbServer::CommandLineRunner->new(
                         $dropdb,
                         '-h', $host,
                         '-p', $port,
-                        '-U', $owner,
+                        '-U', $superuser,
                         $name
                     );
     unless ($runner->rv) {
@@ -108,14 +108,14 @@ sub exportdb {
 
     my $host = $self->host;
     my $port = $self->port;
-    my $owner = $self->owner;
+    my $superuser = $self->superuser;
     my $name = $self->name;
 
     my $runner = TestDbServer::CommandLineRunner->new(
                         $pg_dump,
                         '-h', $host,
                         '-p', $port,
-                        '-U', $owner,
+                        '-U', $superuser,
                         '-f', $filename,
                         $name,
                      );
@@ -134,14 +134,14 @@ sub importdb {
 
     my $host = $self->host;
     my $port = $self->port;
-    my $owner = $self->owner;
+    my $superuser = $self->owner;
     my $name = $self->name;
 
     my $runner = TestDbServer::CommandLineRunner->new(
                         $psql,
                         '-h', $host,
                         '-p', $port,
-                        '-U', $owner,
+                        '-U', $superuser,
                         '-d', $name,
                         '-f', $filename,
                         '--set=ON_ERROR_STOP=1',

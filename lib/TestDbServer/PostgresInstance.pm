@@ -134,7 +134,7 @@ sub importdb {
 
     my $host = $self->host;
     my $port = $self->port;
-    my $superuser = $self->owner;
+    my $superuser = $self->superuser;
     my $name = $self->name;
 
     my $runner = TestDbServer::CommandLineRunner->new(

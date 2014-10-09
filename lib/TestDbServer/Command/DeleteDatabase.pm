@@ -8,6 +8,7 @@ use namespace::autoclean;
 
 has database_id => ( isa => 'Str', is => 'ro', required => 1 );
 has schema => (isa => 'TestDbServer::Schema', is => 'ro', required => 1 );
+has superuser => ( isa => 'Str', is => 'ro', required => 1 );
 
 sub execute {
     my $self = shift;
@@ -22,6 +23,7 @@ sub execute {
                         host => $database->host,
                         port => $database->port,
                         owner => $database->owner,
+                        superuser => $self->superuser,
                     );
 
     $pg->dropdb();

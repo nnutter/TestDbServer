@@ -155,6 +155,7 @@ sub _save_based_on {
                         note => $self->param('note') || undef,
                         database_id => $self->param('based_on') || undef,
                         schema => $schema,
+                        superuser => $self->app->configuration->db_user,
                     );
         $schema->txn_do(sub {
             $template_id = $cmd->execute();

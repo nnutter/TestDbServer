@@ -27,6 +27,7 @@ has 'owner' => (
 has 'superuser' => (
     is => 'ro',
     isa => 'Str',
+    required => 1,
 );
 has 'name' => (
     is => 'ro',

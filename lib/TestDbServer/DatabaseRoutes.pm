@@ -94,6 +94,7 @@ sub _remove_expired_databases {
                 my $cmd = TestDbServer::Command::DeleteDatabase->new(
                                 schema => $schema,
                                 database_id => $database->database_id,
+                                superuser => $self->app->configuration->db_user,
                             );
                 $cmd->execute();
             });
@@ -210,6 +211,7 @@ sub delete {
         my $cmd = TestDbServer::Command::DeleteDatabase->new(
                         database_id => $id,
                         schema => $schema,
+                        superuser => $self->app->configuration->db_user,
                     );
         $schema->txn_do(sub {
             $cmd->execute();

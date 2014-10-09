@@ -10,6 +10,7 @@ has name => ( isa => 'Str', is => 'ro', required => 1 );
 has note => ( isa => 'Maybe[Str]', is => 'ro', required => 1 );
 has database_id => ( isa => 'Str', is => 'ro', required => 1 );
 has schema => ( isa => 'TestDbServer::Schema', is => 'ro', required => 1 );
+has superuser => ( isa => 'Str', is => 'ro', required => 1 );
 
 sub execute {
     my $self = shift;
@@ -24,6 +25,7 @@ sub execute {
                     port => $database->port,
                     owner => $database->owner,
                     name => $database->name,
+                    superuser => $self->superuser,
                 );
 
     my $dump_fh = File::Temp->new(TEMPLATE => 'dump_' . $self->database_id . '_XXXX',

@@ -214,7 +214,7 @@ sub delete {
             $self->app->log->error("template $id does not exist");
             $return_code = 404;
         } else {
-            $self->app->log->fatal("_create_database_from_template: $_");
+            $self->app->log->fatal("delete template failed: $_");
             $return_code = 400;
         }
     };

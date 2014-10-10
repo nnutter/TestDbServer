@@ -42,21 +42,22 @@ has 'name' => (
 sub createdb {
     my $self = shift;
 
-    my $createdb = $self->app_pg->createdb;
+    return $self->_createdb_common();
+}
 
-    my $host = $self->host;
-    my $port = $self->port;
-    my $owner = $self->owner;
-    my $superuser = $self->superuser;
-    my $name = $self->name;
+sub _createdb_common {
+    my $self = shift;
+
+    my $createdb = $self->app_pg->createdb;
 
     my $runner = TestDbServer::CommandLineRunner->new(
                         $createdb,
-                        '-h', $host,
-                        '-p', $port,
-                        '-U', $superuser,
-                        '-O', $owner,
-                         $name,
+                        '-h', $self->host,
+                        '-p', $self->port,
+                        '-U', $self->superuser,
+                        '-O', $self->owner,
+                        @_,
+                        $self->name,
                     );
     unless ($runner->rv) {
         Exception::CannotCreateDatabase->throw(error => "$createdb failed",

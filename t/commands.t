@@ -79,6 +79,7 @@ subtest 'create template from database' => sub {
                     note => 'new template from database',
                     database_id => $database->database_id,
                     schema => $schema,
+                    superuser => $config->db_user,
                 );
     ok($cmd, 'new');
     my $template_id = $cmd->execute();
@@ -114,6 +115,7 @@ subtest 'create database' => sub {
                                 port => $blank_db->port,
                                 name => $blank_db->name,
                                 owner => $blank_db->owner,
+                                superuser => $config->db_user,
                         );
     ok($blank_pg->dropdb, 'drop blank db');
 
@@ -141,6 +143,7 @@ subtest 'create database' => sub {
                                 port => $db->port,
                                 name => $db->name,
                                 owner => $db->owner,
+                                superuser => $config->db_user,
                         );
     ok($db_pg->dropdb, 'drop db');
 };
@@ -148,7 +151,11 @@ subtest 'create database' => sub {
 subtest 'create database from template' => sub {
     plan tests => 6;
 
-    my $sql_script = 'CREATE TABLE foo(foo_id integer NOT NULL PRIMARY KEY)';
+    my $owner = $config->test_db_owner;
+    my $sql_script = <<"SQL_SCRIPT";
+CREATE TABLE foo(foo_id integer NOT NULL PRIMARY KEY);
+ALTER TABLE foo OWNER TO $owner;
+SQL_SCRIPT
 
     my $template = $schema->create_template(
                                 name => $uuid_gen->create_str,
@@ -180,6 +187,7 @@ subtest 'create database from template' => sub {
                                 port => $database->port,
                                 name => $database->name,
                                 owner => $database->owner,
+                                superuser => $config->db_user,
                         );
     ok($db_pg->dropdb, 'drop db');
 
@@ -245,14 +253,18 @@ subtest 'delete database' => sub {
 
     my $cmd = TestDbServer::Command::DeleteDatabase->new(
                             database_id => $database->database_id,
-                            schema => $schema);
+                            schema => $schema,
+                            superuser => $config->db_user,
+                        );
     ok($cmd, 'new delete database');
     ok($cmd->execute(), 'execute delete database');
 
 
     my $not_found_cmd = TestDbServer::Command::DeleteDatabase->new(
                             database_id => 'bogus',
-                            schema => $schema);
+                            schema => $schema,
+                            superuser => $config->db_user,
+                        );
     ok($cmd, 'new delete not existant');
     throws_ok { $cmd->execute() }
         'Exception::DatabaseNotFound',
@@ -278,7 +290,9 @@ subtest 'delete with connections' => sub {
     ok($dbh, 'connect to created database');
     my $cmd = TestDbServer::Command::DeleteDatabase->new(
                                     database_id => $database->id,
-                                    schema => $schema);
+                                    schema => $schema,
+                                    superuser => $config->db_user,
+                                );
     ok($cmd, 'new');
     throws_ok { $cmd->execute() }
         'Exception::CannotDropDatabase',

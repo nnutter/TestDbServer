@@ -50,10 +50,6 @@ sub createdb {
     my $superuser = $self->superuser;
     my $name = $self->name;
 
-    unless ($superuser) {
-        Exception::SuperuserRequired->throw();
-    }
-
     my $runner = TestDbServer::CommandLineRunner->new(
                         $createdb,
                         '-h', $host,

@@ -6,7 +6,7 @@ sub root {
     my $self = shift;
 
     $self->app->log->debug('Getting server info');
-    my $templates = $self->app->db_storage->search_template();
+    my $templates = $self->app->db_storage->search_database_template();
     my $databases = $self->app->db_storage->search_database();
 
     $self->render(json =>

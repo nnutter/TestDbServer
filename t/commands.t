@@ -187,28 +187,24 @@ subtest 'create database from template' => sub {
 };
 
 subtest 'delete template' => sub {
-    plan tests => 4;
+    plan tests => 3;
 
-    my $upload = new_upload( my $file_name = File::Temp::tmpnam(),
-                             my $file_contents = "This is the test contents\n");
+    my $pg = new_pg_instance();
 
-    ok(my $template_id = TestDbServer::Command::SaveTemplateFile->new(
-                name => $file_name,
-                owner => 'bob',
-                note => 'test note',
-                upload => $upload,
-                schema => $schema,
-            )->execute(),
-        'Create file to unlink');
-    my $short_name = File::Basename::basename($file_name);
+    my $template = $schema->create_database_template(
+                                name => $pg->name,
+                                host => $pg->host,
+                                port => $pg->port,
+                                owner => $pg->owner,
+                            );
 
     my $cmd = TestDbServer::Command::DeleteTemplate->new(
-                template_id => $template_id,
+                template_id => $template->template_id,
                 schema => $schema);
     ok($cmd, 'new');
     ok($cmd->execute(), 'execute');
 
-    ok(! $schema->find_template($template_id),
+    ok(! $schema->find_database_template($template->template_id),
         'template is deleted');
 };
 
@@ -275,16 +271,6 @@ subtest 'delete with connections' => sub {
     $dbh->disconnect();
     ok($cmd->execute(), 'delete after disconnecting');
 };
-
-sub new_upload {
-    my($name, $contents) = @_;
-
-    my $asset = Mojo::Asset::Memory->new()->add_chunk($contents);
-
-    return Mojo::Upload->new()
-                        ->asset($asset)
-                        ->filename($name);
-}
 
 sub new_pg_instance {
     my $pg = TestDbServer::PostgresInstance->new(

@@ -37,10 +37,9 @@ sub connect {
 }
 
 # create_database(), search_database(), find_database(), delete_database()
-# create_template(), search_template(), find_template(), delete_template()
 # create_database_template() search_database_template(), find_database_template(), delete_database_template
 sub _resultset_type_from_type { join('', map { ucfirst $_ } split('_', $_[0])); }
-foreach my $type ( qw( database template database_template ) ) {
+foreach my $type ( qw( database database_template ) ) {
     _sub_creator($type, 'create');
     _sub_creator($type, 'search');
 

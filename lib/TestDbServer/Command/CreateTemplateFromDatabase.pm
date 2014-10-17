@@ -27,8 +27,6 @@ sub execute {
                     superuser => $self->superuser,
                 );
 
-    $pg->createdb_from_template( $database->name );
-
     my $template = $self->schema->create_database_template(
                                 name => $self->name,
                                 note => $self->note,
@@ -36,6 +34,8 @@ sub execute {
                                 port => $database->port,
                                 owner => $database->owner,
                             );
+
+    $pg->createdb_from_template( $database->name );
 
     return $template->template_id;
 }

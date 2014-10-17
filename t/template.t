@@ -31,8 +31,8 @@ subtest 'list' => sub {
     
     my $db = $app->db_storage;
     my $owner = $uuid_gen->create_str;
-    @templates = (  $db->create_database_template(name => $uuid_gen->create_str, owner => $owner, host => 'localhost', port => 123),
-                    $db->create_database_template(name => $uuid_gen->create_str, owner => $owner, host => 'localhost', port => 123),
+    @templates = (  $db->create_template(name => $uuid_gen->create_str, owner => $owner, host => 'localhost', port => 123),
+                    $db->create_template(name => $uuid_gen->create_str, owner => $owner, host => 'localhost', port => 123),
                 );
 
     $req = $t->get_ok('/templates')

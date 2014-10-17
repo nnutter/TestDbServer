@@ -60,7 +60,7 @@ subtest 'create template from database' => sub {
     my $template_id = $cmd->execute();
     ok($template_id, 'execute');
 
-    my $template = $schema->find_database_template($template_id);
+    my $template = $schema->find_template($template_id);
     ok($template, 'get created template');
 
     # connect to the template database
@@ -109,7 +109,7 @@ subtest 'create database' => sub {
 
 
     # with a template ID
-    my $template = $schema->create_database_template(
+    my $template = $schema->create_template(
                                 name => $uuid_gen->create_str,
                                 host => $blank_db->host,
                                 port => $blank_db->port,
@@ -143,7 +143,7 @@ subtest 'create database from template' => sub {
     my $pg = new_pg_instance();
 
     note('original template named '.$pg->name);
-    my $template = $schema->create_database_template( map { $_ => $pg->$_ } qw( host port name owner ) );
+    my $template = $schema->create_template( map { $_ => $pg->$_ } qw( host port name owner ) );
     # Make a table in the template
     my $table_name = "test_table_$$";
     {
@@ -191,7 +191,7 @@ subtest 'delete template' => sub {
 
     my $pg = new_pg_instance();
 
-    my $template = $schema->create_database_template(
+    my $template = $schema->create_template(
                                 name => $pg->name,
                                 host => $pg->host,
                                 port => $pg->port,
@@ -204,7 +204,7 @@ subtest 'delete template' => sub {
     ok($cmd, 'new');
     ok($cmd->execute(), 'execute');
 
-    ok(! $schema->find_database_template($template->template_id),
+    ok(! $schema->find_template($template->template_id),
         'template is deleted');
 };
 

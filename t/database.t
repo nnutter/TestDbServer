@@ -94,7 +94,7 @@ subtest 'create from template' => sub {
                 );
     ok( $pg->createdb(), 'create database to use as a template');
 
-    my $template = $db->create_database_template(
+    my $template = $db->create_template(
                                             name => $pg->name,
                                             host => $pg->host,
                                             port => $pg->port,
@@ -118,7 +118,7 @@ subtest 'create from template' => sub {
     my $created_db_info = $test->tx->res->json;
     ok(_connect_to_created_database($created_db_info), 'connect to created database');
 
-    my $template_after_create = $db->find_database_template($template->template_id);
+    my $template_after_create = $db->find_template($template->template_id);
     isnt($template_after_create->last_used_time,
          $template->last_used_time,
          'Template last used time was updated');

@@ -11,7 +11,7 @@ has schema => (isa => 'TestDbServer::Schema', is => 'ro', required => 1 );
 sub execute {
     my $self = shift;
 
-    my $template = $self->schema->find_database_template($self->template_id);
+    my $template = $self->schema->find_template($self->template_id);
     unless ($template) {
         Exception::TemplateNotFound->throw(template_id => $self->template_id);
     }

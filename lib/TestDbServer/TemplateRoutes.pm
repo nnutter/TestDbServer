@@ -20,8 +20,8 @@ sub list {
                                 : 'no params');
 
     my $templates = %$params
-                    ? $self->app->db_storage->search_database_template(%$params)
-                    : $self->app->db_storage->search_database_template;
+                    ? $self->app->db_storage->search_template(%$params)
+                    : $self->app->db_storage->search_template;
 
     my(@ids, %render_args);
     %render_args = ( json => \@ids );
@@ -65,7 +65,7 @@ sub get {
 
     my($template, $error);
     try {
-        $template = $schema->find_database_template($id);
+        $template = $schema->find_template($id);
     }
     catch {
         $error = $_;

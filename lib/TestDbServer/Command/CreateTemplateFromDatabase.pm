@@ -27,7 +27,7 @@ sub execute {
                     superuser => $self->superuser,
                 );
 
-    my $template = $self->schema->create_database_template(
+    my $template = $self->schema->create_template(
                                 name => $self->name,
                                 note => $self->note,
                                 host => $database->host,

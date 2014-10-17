@@ -33,7 +33,7 @@ subtest 'root with one template and one database' => sub {
     plan tests => 4;
 
     my $storage = $app->db_storage();
-    my $template = $storage->create_database_template(
+    my $template = $storage->create_template(
                                             name => $uuid_gen->create_str,
                                             owner => 'bubba',
                                             host => 'localhost',

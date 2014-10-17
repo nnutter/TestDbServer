@@ -1,4 +1,4 @@
-package TestDbServer::Schema::Result::DatabaseTemplate;
+package TestDbServer::Schema::Result::Template;
 use parent 'DBIx::Class::Core';
 
 __PACKAGE__->table('database_template');

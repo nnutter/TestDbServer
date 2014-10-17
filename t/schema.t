@@ -40,20 +40,20 @@ my @templates;
 subtest save_template => sub {
     plan tests => 7;
 
-    my $template_1 = $schema->create_database_template(name => $uuid_gen->create_str, owner => 'bubba', note => 'hi there', host => 'localhost', port => 123);
+    my $template_1 = $schema->create_template(name => $uuid_gen->create_str, owner => 'bubba', note => 'hi there', host => 'localhost', port => 123);
     ok($template_1,'Save template with a note');
     push @templates, $template_1;
 
-    my $template_2 = $schema->create_database_template(name => $uuid_gen->create_str, owner => 'bubba', host => 'localhost', port => 123);
+    my $template_2 = $schema->create_template(name => $uuid_gen->create_str, owner => 'bubba', host => 'localhost', port => 123);
     ok($template_2, 'Save template without a note');
     push @templates, $template_2;
 
-    throws_ok { $schema->create_database_template(name => $template_1->name, owner => 'bubba', note => 'garbage', host => 'localhost', port => 123) }
+    throws_ok { $schema->create_template(name => $template_1->name, owner => 'bubba', note => 'garbage', host => 'localhost', port => 123) }
         'DBIx::Class::Exception',
         'Cannot save_template() with duplicate name';
 
     check_required_attributes_for_save(
-        sub { $schema->create_database_template(@_) },
+        sub { $schema->create_template(@_) },
         { name => "template name $$", owner => 'bubba', host => 'localhost', port => 123 },
     );
 };
@@ -110,7 +110,7 @@ subtest get_template => sub {
 
     foreach my $template ( @templates ) {
         my $template_id = $template->template_id;
-        my $tmpl = $schema->find_database_template($template_id);
+        my $tmpl = $schema->find_template($template_id);
         ok($tmpl, "Get template $template_id");
         is($tmpl->template_id, $template_id, 'template_id is correct');
     }
@@ -130,7 +130,7 @@ subtest get_database => sub {
 subtest all_get_templates => sub {
     plan tests => 1;
 
-    my @got_templates = $schema->search_database_template();
+    my @got_templates = $schema->search_template();
     cmp_deeply([ map { $_->template_id } @got_templates ],
                 supersetof(map { $_->template_id } @templates),
                 'found expected templates');
@@ -158,15 +158,15 @@ subtest delete_database => sub {
 subtest delete_template => sub {
     plan tests => 5;
 
-    dies_ok { $schema->delete_database_template('garbage') }
+    dies_ok { $schema->delete_template('garbage') }
         'Deleting unknown template throws exception';
 
-    throws_ok { $schema->delete_database_template($templates[0]->template_id) }
+    throws_ok { $schema->delete_template($templates[0]->template_id) }
         'DBIx::Class::Exception',
         'Cannot remove template with linked databases';
-    ok($schema->find_database_template($templates[0]->template_id), 'template still exists');
+    ok($schema->find_template($templates[0]->template_id), 'template still exists');
 
-    delete_thing('database_template', $templates[1]->template_id);
+    delete_thing('template', $templates[1]->template_id);
 };
 
 sub delete_thing {

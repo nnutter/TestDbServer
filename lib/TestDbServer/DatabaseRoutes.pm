@@ -4,6 +4,7 @@ use Mojo::Base 'Mojolicious::Controller';
 use Try::Tiny;
 
 use TestDbServer::Utils;
+use TestDbServer::Command::CreateDatabase;
 use TestDbServer::Command::CreateDatabaseFromTemplate;
 use TestDbServer::Command::DeleteDatabase;
 

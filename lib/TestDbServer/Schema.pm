@@ -37,14 +37,16 @@ sub connect {
 }
 
 # create_database(), search_database(), find_database(), delete_database()
-# create_template(), search_template(), find_template(), delete_template()
+# create_template() search_template(), find_template(), delete_template
+sub _resultset_type_from_type { join('', map { ucfirst $_ } split('_', $_[0])); }
 foreach my $type ( qw( database template ) ) {
     _sub_creator($type, 'create');
     _sub_creator($type, 'search');
 
+    my $resultset_type = _resultset_type_from_type($type);
     my $find_sub = sub {
         my $self = shift;
-        $self->resultset(ucfirst($type))->find(@_);
+        $self->resultset($resultset_type)->find(@_);
     };
     my $find_name = "find_${type}";
 
@@ -65,7 +67,7 @@ sub _sub_creator {
     my $entity_type = shift;
     my $resultset_method = shift;
 
-    my $resultset_type = ucfirst($entity_type);
+    my $resultset_type = _resultset_type_from_type($entity_type);
 
     my $sub = sub {
         my $self = shift;

@@ -1,67 +1,41 @@
 package TestDbServer::Command::CreateDatabaseFromTemplate;
 
-use File::Temp;
-
 use TestDbServer::PostgresInstance;
-use TestDbServer::Command::CreateDatabase;
 use TestDbServer::Exceptions;
 
 use Moose;
 use namespace::autoclean;
 
-extends 'TestDbServer::Command::CreateDatabase';
-
-has '+template_id' => ( isa => 'Str', is => 'ro', required => 1 );
-has '+owner' => ( isa => 'Maybe[Str]', is => 'ro', required => 0 );
-
-sub BUILDARGS {
-    my($class, %params) = @_;
-    # if no owner specified, get it from the template
-    unless ($params{owner} || $params{template_id}) {
-        Exception::RequiredParamMissing->throw(error => 'owner or template_id is required',
-                                                params => ['owner','template_id']);
-    }
-
-    unless ($params{owner}) {
-        my $template = _template_id_must_exist($params{schema}, $params{template_id});
-        $params{owner} = $template->owner if $template;
-    }
-    return \%params;
-}
-
-sub _template_id_must_exist {
-    my($schema, $template_id) = @_;
-
-    my $template = $schema->find_template($template_id);
-    unless ($template) {
-        Exception::TemplateNotFound->throw(template_id => $template_id);
-    }
-    return $template;
-}
+has host => ( isa => 'Str', is => 'ro', required => 1 );
+has port => ( isa => 'Int', is => 'ro', required => 1 );
+has template_id => ( isa => 'Str', is => 'ro', required => 1 );
+has schema => ( isa => 'TestDbServer::Schema', is => 'ro', required => 1 );
+has superuser => ( isa => 'Str', is => 'ro', required => 1 );
 
 sub execute {
     my $self = shift;
 
-    my $database = $self->SUPER::execute();
-
-    my $template = _template_id_must_exist($self->schema, $self->template_id);
-
-    my $tmpfile = File::Temp->new();
-    unless ($tmpfile) {
-        Exception::CannotOpenFile->throw(error => $!, path => 'File::Temp->new()');
+    my $template = $self->schema->find_template($self->template_id);
+    unless ($template) {
+        Exception::TemplateNotFound->throw(template_id => $self->template_id);
     }
-    $tmpfile->print($template->sql_script);
-    $tmpfile->close();
 
     my $pg = TestDbServer::PostgresInstance->new(
-                        name => $database->name,
-                        host => $database->host,
-                        port => $database->port,
-                        owner => $self->owner || $database->owner,
+                        host => $template->host,
+                        port => $template->port,
+                        owner => $template->owner,
                         superuser => $self->superuser,
                     );
 
-    $pg->importdb($tmpfile->filename);
+    $pg->createdb_from_template($template->name);
+
+    my $database = $self->schema->create_database(
+                        name => $pg->name,
+                        host => $pg->host,
+                        port => $pg->port,
+                        owner => $pg->owner,
+                        template_id => $template->template_id,
+                    );
 
     my $update_last_used_sql = $self->schema->sql_to_update_last_used_column();
     $template->update({ last_used_time => \$update_last_used_sql });

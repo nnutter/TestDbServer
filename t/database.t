@@ -83,27 +83,30 @@ subtest 'get' => sub {
 };
 
 subtest 'create from template' => sub {
-    plan tests => 15;
+    plan tests => 16;
 
     my $db = $app->db_storage();
-    my $template_owner = $config->test_db_owner;
-    my $template_name = $uuid_gen->create_str;
-    my $template_id = do {
-        my $template = $db->create_template(name => $template_name,
-                                            sql_script => 'CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY)',
-                                            owner => $template_owner,
-                                        );
-        $template->template_id;
-    };
+    my $pg = TestDbServer::PostgresInstance->new(
+                    host => $config->db_host,
+                    port => $config->db_port,
+                    owner => $config->test_db_owner,
+                    superuser => $config->db_user,
+                );
+    ok( $pg->createdb(), 'create database to use as a template');
 
-    my $template = $db->find_template($template_id);
+    my $template = $db->create_template(
+                                            name => $pg->name,
+                                            host => $pg->host,
+                                            port => $pg->port,
+                                            owner => $pg->owner,
+                                        );
 
     sleep(1);  # allow the last_used_time to change
 
     my $test =
-        $t->post_ok("/databases?based_on=${template_id}")
+        $t->post_ok("/databases?based_on=" . $template->template_id)
             ->status_is(201)
-            ->json_is('/owner' => $template_owner)
+            ->json_is('/owner' => $template->owner)
             ->json_has('/id')
             ->json_has('/host')
             ->json_has('/port')

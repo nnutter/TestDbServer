@@ -53,10 +53,6 @@ use Exception::Class (
         isa => 'Exception::ShellCommandFailed',
     },
 
-    Exception::SuperuserRequired => {
-        isa => 'Exception::BaseException',
-    },
-
     Exception::DatabaseNotFound => {
         isa => 'Exception::BaseException',
         fields => [qw(database_id)],

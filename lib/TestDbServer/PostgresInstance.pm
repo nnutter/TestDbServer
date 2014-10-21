@@ -32,7 +32,7 @@ has 'superuser' => (
 has 'name' => (
     is => 'ro',
     isa => 'Str',
-    lazy_build => 1,
+    builder => '_build_name',
 );
 {
     my $app_pg = App::Info::RDBMS::PostgreSQL->new();
@@ -42,25 +42,22 @@ has 'name' => (
 sub createdb {
     my $self = shift;
 
+    return $self->_createdb_common();
+}
+
+sub _createdb_common {
+    my $self = shift;
+
     my $createdb = $self->app_pg->createdb;
-
-    my $host = $self->host;
-    my $port = $self->port;
-    my $owner = $self->owner;
-    my $superuser = $self->superuser;
-    my $name = $self->name;
-
-    unless ($superuser) {
-        Exception::SuperuserRequired->throw();
-    }
 
     my $runner = TestDbServer::CommandLineRunner->new(
                         $createdb,
-                        '-h', $host,
-                        '-p', $port,
-                        '-U', $superuser,
-                        '-O', $owner,
-                         $name,
+                        '-h', $self->host,
+                        '-p', $self->port,
+                        '-U', $self->superuser,
+                        '-O', $self->owner,
+                        @_,
+                        $self->name,
                     );
     unless ($runner->rv) {
         Exception::CannotCreateDatabase->throw(error => "$createdb failed",
@@ -68,6 +65,15 @@ sub createdb {
                                                child_error => $runner->child_error);
     }
     return 1;
+}
+
+
+sub createdb_from_template {
+    my($self, $template_name) = @_;
+
+    return $self->_createdb_common(
+                '-T', $template_name,
+            );
 }
 
 my $uuid_gen = Data::UUID->new();
@@ -122,33 +128,6 @@ sub exportdb {
                      );
     unless ($runner->rv) {
         Exception::CannotExportDatabase->throw(error => "$pg_dump failed",
-                                               output => $runner->output,
-                                               child_error => $runner->child_error);
-    }
-    return 1;
-}
-
-sub importdb {
-    my($self, $filename) = @_;
-
-    my $psql = $self->app_pg->psql;
-
-    my $host = $self->host;
-    my $port = $self->port;
-    my $superuser = $self->superuser;
-    my $name = $self->name;
-
-    my $runner = TestDbServer::CommandLineRunner->new(
-                        $psql,
-                        '-h', $host,
-                        '-p', $port,
-                        '-U', $superuser,
-                        '-d', $name,
-                        '-f', $filename,
-                        '--set=ON_ERROR_STOP=1',
-                    );
-    unless ($runner->rv) {
-        Exception::CannotImportDatabase->throw(error => "$psql failed",
                                                output => $runner->output,
                                                child_error => $runner->child_error);
     }

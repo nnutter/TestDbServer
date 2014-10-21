@@ -9,7 +9,7 @@ use Data::UUID;
 use File::Temp qw();
 
 use TestDbServer::Configuration;
-plan tests => 7;
+plan tests => 5;
 
 my $config = TestDbServer::Configuration->new_from_path();
 
@@ -31,8 +31,8 @@ subtest 'list' => sub {
     
     my $db = $app->db_storage;
     my $owner = $uuid_gen->create_str;
-    @templates = (  $db->create_template(name => $uuid_gen->create_str, owner => $owner, sql_script => 'script 1'),
-                    $db->create_template(name => $uuid_gen->create_str, owner => $owner, sql_script => 'script 2'),
+    @templates = (  $db->create_template(name => $uuid_gen->create_str, owner => $owner, host => 'localhost', port => 123),
+                    $db->create_template(name => $uuid_gen->create_str, owner => $owner, host => 'localhost', port => 123),
                 );
 
     $req = $t->get_ok('/templates')
@@ -62,13 +62,14 @@ subtest 'search' => sub {
 };
 
 subtest 'get' => sub {
-    plan tests => 12;
+    plan tests => 13;
 
     $t->get_ok('/templates/'.$templates[0]->template_id)
         ->status_is(200)
         ->json_is('/template_id' => $templates[0]->template_id)
         ->json_is('/name' => $templates[0]->name)
-        ->json_is('/sql_script' => $templates[0]->sql_script)
+        ->json_is('/host' => $templates[0]->host)
+        ->json_is('/port' => $templates[0]->port)
         ->json_is('/note' => undef)
         ->json_has('/create_time')
         ->json_has('/last_used_time');
@@ -95,67 +96,6 @@ subtest 'delete' => sub {
 
     $t->delete_ok('/templates/garbage')
         ->status_is(400);
-};
-
-subtest 'upload file' => sub {
-    plan tests => 9;
-
-    my $upload_file_contents = "This is test content\n";
-    my $upload_file = File::Temp->new();
-    $upload_file->print($upload_file_contents);
-    $upload_file->close();
-    my $upload_file_name = File::Basename::basename($upload_file->filename);
-
-    my $template_name = $uuid_gen->create_str;
-    my $template_owner = 'bubba';
-    my $template_note = 'This is some test data';
-
-    my $test = $t->post_ok('/templates' =>
-                    form => {
-                        name => $template_name,
-                        owner => $template_owner,
-                        note => $template_note,
-                        file => { file => $upload_file->filename },
-                    })
-            ->status_is(201)
-            ->header_like('Location' => qr(/templates/\w+), 'Location header');
-
-    my $location = $test->tx->res->headers->location;
-    $t->get_ok($location)
-        ->status_is(200)
-        ->json_is('/name' => $template_name)
-        ->json_is('/owner' => $template_owner)
-        ->json_is('/note' => $template_note)
-        ->json_is('/sql_script', $upload_file_contents);
-};
-
-subtest 'upload duplicate' => sub {
-    plan tests => 4;
-
-    my $upload_file = File::Temp->new();
-    $upload_file->print("This is test content\n");
-    $upload_file->close();
-
-    my $template_name = $uuid_gen->create_str;
-    my $template_owner = 'bubba';
-
-    $t->post_ok('/templates' =>
-                    form => {
-                        name => $template_name,
-                        owner => $template_owner,
-                        file => { file => $upload_file->filename }
-                    },
-                )
-            ->status_is(201);
-
-    $t->post_ok('/templates' =>
-                    form => {
-                        name => $template_name,
-                        owner => $template_owner,
-                        file => { file => __FILE__ }
-                    },
-                )
-            ->status_is(409, 'Upload with duplicate name returns 409');
 };
 
 subtest 'based on database' => sub {

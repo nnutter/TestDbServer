@@ -73,7 +73,7 @@ sub get {
 
     if ($template) {
         $self->app->log->info("found template $id");
-        my %template = map { $_ => $template->$_ } qw(template_id name owner note sql_script create_time last_used_time);
+        my %template = map { $_ => $template->$_ } qw(template_id name owner note host port create_time last_used_time);
         $self->render(json => \%template);
 
     } elsif ($error) {
@@ -89,65 +89,13 @@ sub get {
 sub save {
     my $self = shift;
 
-    if (my $database_id = $self->req->param('based_on')) {
-        $self->app->log->info("create template based on database $database_id");
-        $self->_save_based_on($database_id);
-
-    } else {
-        $self->app->log->info('uploading template from file');
-        $self->_save_file();
-    }
-}
-
-sub _save_file {
-    my $self = shift;
-
-    my $schema = $self->app->db_storage;
-    my($template_id, $return_code);
-    try {
-        my $cmd = TestDbServer::Command::SaveTemplateFile->new(
-                name => $self->param('name') || undef,
-                owner => $self->param('owner') || undef,
-                note => $self->param('note') || undef,
-                upload => $self->req->upload('file'),
-                schema => $schema,
-            );
-
-        $schema->txn_do(sub {
-            $template_id = $cmd->execute();
-            $return_code = 201;
-        });
-    }
-    catch {
-        if ((ref($_) && $_->isa('Exception::FileExists'))
-            ||
-            (ref($_) && $_->isa('DBIx::Class::Exception') && $_ =~ m/unique constraint/i)
-        ) {
-            $self->app->log->error('save_file conflict');
-            $return_code = 409;
-        } else {
-            $self->app->log->error("save_file: $_");
-            $return_code = 500;
-        }
-    };
-
-    if ($template_id) {
-        $self->app->log->info('template uploaded');
-        my $response_location = TestDbServer::Utils::id_url_for_request_and_entity_id($self->req, $template_id);
-        $self->res->headers->location($response_location);
-    }
-
-    $self->rendered($return_code);
-}
-
-sub _save_based_on {
-    my $self = shift;
-
     my $schema = $self->app->db_storage;
     my ($template_id, $return_code);
     try {
-        unless ($self->param('name')) {
-            Exception::RequiredParamMissing->throw(params => ['name']);
+        foreach my $req_param ( qw( name based_on ) ) {
+            unless ($self->param($req_param)) {
+                Exception::RequiredParamMissing->throw(params => [$req_param]);
+            }
         }
 
         my $cmd = TestDbServer::Command::CreateTemplateFromDatabase->new(
@@ -214,7 +162,7 @@ sub delete {
             $self->app->log->error("template $id does not exist");
             $return_code = 404;
         } else {
-            $self->app->log->fatal("_create_database_from_template: $_");
+            $self->app->log->fatal("delete template failed: $_");
             $return_code = 400;
         }
     };

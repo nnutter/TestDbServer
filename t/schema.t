@@ -38,23 +38,23 @@ subtest initialize => sub {
 
 my @templates;
 subtest save_template => sub {
-    plan tests => 6;
+    plan tests => 7;
 
-    my $template_1 = $schema->create_template(name => $uuid_gen->create_str, owner => 'bubba', sql_script => '', note => 'hi there');
+    my $template_1 = $schema->create_template(name => $uuid_gen->create_str, owner => 'bubba', note => 'hi there', host => 'localhost', port => 123);
     ok($template_1,'Save template with a note');
     push @templates, $template_1;
 
-    my $template_2 = $schema->create_template(name => $uuid_gen->create_str, owner => 'bubba', sql_script => '');
+    my $template_2 = $schema->create_template(name => $uuid_gen->create_str, owner => 'bubba', host => 'localhost', port => 123);
     ok($template_2, 'Save template without a note');
     push @templates, $template_2;
 
-    throws_ok { $schema->create_template(name => $template_1->name, owner => 'bubba', sql_script => '', note => 'garbage') }
+    throws_ok { $schema->create_template(name => $template_1->name, owner => 'bubba', note => 'garbage', host => 'localhost', port => 123) }
         'DBIx::Class::Exception',
         'Cannot save_template() with duplicate name';
 
     check_required_attributes_for_save(
         sub { $schema->create_template(@_) },
-        { name => 'template name', sql_script => '', owner => 'bubba' },
+        { name => "template name $$", owner => 'bubba', host => 'localhost', port => 123 },
     );
 };
 

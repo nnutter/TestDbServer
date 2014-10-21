@@ -26,53 +26,28 @@ my $config = TestDbServer::Configuration->new_from_path();
 my $schema = create_new_schema($config);
 my $uuid_gen = Data::UUID->new();
 
-plan tests => 7;
-
-subtest 'save template file' => sub {
-    plan tests => 4;
-
-    my $upload = new_upload( my $file_name = File::Temp::tmpnam(),
-                             my $file_contents = "This is the test contents\n");
-
-    my $command = TestDbServer::Command::SaveTemplateFile->new(
-                        name => $uuid_gen->create_str,
-                        owner => $config->test_db_owner,
-                        note => 'test note',
-                        upload => $upload,
-                        schema => $schema,
-                    );
-    ok($command, 'new');
-    ok(my $template_id = $command->execute(), 'execute');
-
-    my $template = $schema->find_template($template_id);
-    ok($template, 'get created template');
-
-    is($template->sql_script, $file_contents, 'SQL script');
-};
+plan tests => 6;
 
 subtest 'create template from database' => sub {
     plan tests => 5;
 
     my $pg = new_pg_instance();
 
-    my $base_template_name = File::Temp::tmpnam();
-
-    my $base_template = $schema->create_template(name => $base_template_name,
-                                                 sql_script => '',
-                                                 owner => $base_template_name );
-    my $database = $schema->create_database(template_id => $base_template->template_id,
-                                            map { $_ => $pg->$_ } qw( host port name owner ) );
+    note('original database named '.$pg->name);
+    my $database = $schema->create_database( map { $_ => $pg->$_ } qw( host port name owner ) );
     # Make a table in the database
     my $table_name = "test_table_$$";
-    my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                    $pg->name, $pg->host, $pg->port),
-                            $pg->owner,
-                            '');
-    ok($dbi->do("CREATE TABLE $table_name (foo integer NOT NULL PRIMARY KEY)"),
-        'Create table in base database');
+    {
+        my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
+                                        $pg->name, $pg->host, $pg->port),
+                                $pg->owner,
+                                '');
+        ok($dbi->do("CREATE TABLE $table_name (foo integer NOT NULL PRIMARY KEY)"),
+            'Create table in base database');
+        $dbi->disconnect;
+    }
 
-    my $new_template_name = File::Temp::tmpnam();
-    my $tmpdir = File::Temp::tempdir();
+    my $new_template_name = $uuid_gen->create_str;
 
     my $cmd = TestDbServer::Command::CreateTemplateFromDatabase->new(
                     name => $new_template_name,
@@ -88,10 +63,23 @@ subtest 'create template from database' => sub {
     my $template = $schema->find_template($template_id);
     ok($template, 'get created template');
 
-    like($template->sql_script, qr(CREATE TABLE $table_name), 'Template sql script');
-
+    # connect to the template database
+    my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
+                                    $template->name, $template->host, $template->port));
+    ok($dbi->do("SELECT foo FROM $table_name WHERE FALSE"), 'table exists in template database');
     $dbi->disconnect;
+
+    # remove the original database
     $pg->dropdb;
+
+    # remove the template database
+    TestDbServer::PostgresInstance->new(
+                        host => $template->host,
+                        port => $template->port,
+                        owner => $template->owner,
+                        superuser => $config->db_user,
+                        name => $template->name
+            )->dropdb;
 };
 
 subtest 'create database' => sub {
@@ -123,8 +111,9 @@ subtest 'create database' => sub {
     # with a template ID
     my $template = $schema->create_template(
                                 name => $uuid_gen->create_str,
+                                host => $blank_db->host,
+                                port => $blank_db->port,
                                 owner => $config->test_db_owner,
-                                sql_script => '',
                             );
     my $create_db_cmd = TestDbServer::Command::CreateDatabase->new(
                                 host => $config->db_host,
@@ -149,92 +138,73 @@ subtest 'create database' => sub {
 };
 
 subtest 'create database from template' => sub {
-    plan tests => 6;
+    plan tests => 4;
 
-    my $owner = $config->test_db_owner;
-    my $sql_script = <<"SQL_SCRIPT";
-CREATE TABLE foo(foo_id integer NOT NULL PRIMARY KEY);
-ALTER TABLE foo OWNER TO $owner;
-SQL_SCRIPT
+    my $pg = new_pg_instance();
 
-    my $template = $schema->create_template(
-                                name => $uuid_gen->create_str,
-                                owner => $config->test_db_owner,
-                                sql_script => $sql_script,
-                            );
+    note('original template named '.$pg->name);
+    my $template = $schema->create_template( map { $_ => $pg->$_ } qw( host port name owner ) );
+    # Make a table in the template
+    my $table_name = "test_table_$$";
+    {
+        my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
+                                        $pg->name, $pg->host, $pg->port),
+                                $pg->owner,
+                                '');
+        ok($dbi->do("CREATE TABLE $table_name (foo integer NOT NULL PRIMARY KEY)"),
+            'Create table in base template');
+        $dbi->disconnect;
+    }
 
     my $cmd = TestDbServer::Command::CreateDatabaseFromTemplate->new(
-                            host => $config->db_host,
-                            port => $config->db_port,
-                            superuser => $config->db_user,
-                            schema => $schema,
-                            template_id => $template->template_id,
-                        );
+                    host => $config->db_host,
+                    port => $config->db_port,
+                    template_id => $template->template_id,
+                    schema => $schema,
+                    superuser => $config->db_user,
+                );
     ok($cmd, 'new');
     my $database = $cmd->execute();
     ok($database, 'execute');
 
+    # connect to the template database
     my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                    $database->name, $database->host, $database->port),
-                            $database->owner,
-                            '',
-                            { RaiseError => 1 });
-    ok($dbi->do('select * from foo'), 'Table exists');
-    $dbi->disconnect();
+                                    $database->name, $database->host, $database->port));
+    ok($dbi->do("SELECT foo FROM $table_name WHERE FALSE"), 'table exists in template database');
+    $dbi->disconnect;
 
-    my $db_pg =  TestDbServer::PostgresInstance->new(
-                                host => $database->host,
-                                port => $database->port,
-                                name => $database->name,
-                                owner => $database->owner,
-                                superuser => $config->db_user,
-                        );
-    ok($db_pg->dropdb, 'drop db');
+    # remove the original template
+    $pg->dropdb;
 
-    throws_ok { TestDbServer::Command::CreateDatabaseFromTemplate->new(
-                    host => $config->db_host,
-                    port => $config->db_port,
-                    superuser => $config->db_user,
-                    schema => $schema);
-                }
-        'Exception::RequiredParamMissing',
-        'instantiation without owner and template_id fails';
-
-    throws_ok { TestDbServer::Command::CreateDatabaseFromTemplate->new(
-                    host => $config->db_host,
-                    port => $config->db_port,
-                    superuser => $config->db_user,
-                    schema => $schema,
-                    template_id => 9999,
-                  )->execute();
-               }
-        'Exception::TemplateNotFound',
-        'instantiate with bogus template_id';
+    # remove the created database
+    TestDbServer::PostgresInstance->new(
+                        host => $database->host,
+                        port => $database->port,
+                        owner => $database->owner,
+                        superuser => $config->db_user,
+                        name => $database->name
+            )->dropdb;
 };
 
 subtest 'delete template' => sub {
-    plan tests => 4;
+    plan tests => 3;
 
-    my $upload = new_upload( my $file_name = File::Temp::tmpnam(),
-                             my $file_contents = "This is the test contents\n");
+    my $pg = new_pg_instance();
 
-    ok(my $template_id = TestDbServer::Command::SaveTemplateFile->new(
-                name => $file_name,
-                owner => 'bob',
-                note => 'test note',
-                upload => $upload,
-                schema => $schema,
-            )->execute(),
-        'Create file to unlink');
-    my $short_name = File::Basename::basename($file_name);
+    my $template = $schema->create_template(
+                                name => $pg->name,
+                                host => $pg->host,
+                                port => $pg->port,
+                                owner => $pg->owner,
+                            );
 
     my $cmd = TestDbServer::Command::DeleteTemplate->new(
-                template_id => $template_id,
+                template_id => $template->template_id,
                 schema => $schema);
     ok($cmd, 'new');
     ok($cmd->execute(), 'execute');
 
-    ok(! $schema->find_template($template_id),
+    ok(! $schema->find_template($template->template_id),
         'template is deleted');
 };
 
@@ -301,16 +271,6 @@ subtest 'delete with connections' => sub {
     $dbh->disconnect();
     ok($cmd->execute(), 'delete after disconnecting');
 };
-
-sub new_upload {
-    my($name, $contents) = @_;
-
-    my $asset = Mojo::Asset::Memory->new()->add_chunk($contents);
-
-    return Mojo::Upload->new()
-                        ->asset($asset)
-                        ->filename($name);
-}
 
 sub new_pg_instance {
     my $pg = TestDbServer::PostgresInstance->new(

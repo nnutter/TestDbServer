@@ -1,0 +1,51 @@
+#!/usr/bin/env perl
+
+use TestDbServer::CmdLine qw(get_user_agent url_for assert_success);
+use LWP;
+use HTTP::Request::Common qw(POST);
+use Getopt::Long;
+use JSON qw(decode_json);
+
+my $opts = {};
+GetOptions($opts, 'note=s', 'short-help', 'help');
+
+print_short_help() if ($opts->{'short-help'});
+print_help() if ($opts->{help});
+
+my ($name, $database_id) = @ARGV;
+
+# validate name
+# validate database_id
+
+my $ua = get_user_agent();
+
+my @payload = map { $_ => $opts->{$_} }
+              grep { exists $opts->{$_} }
+              qw( note );
+push @payload,
+    'name' => $name,
+    'based_on' => $database_id;
+
+my $req = POST(url_for('templates'),
+                Content_Type => 'form-data',
+                Content => \@payload);
+my $rsp = $ua->request($req);
+assert_success $rsp;
+
+printf "CREATED %s\n", $name;
+exit 0;
+
+sub print_short_help {
+    print "create a new database template from an existing database\n";
+    exit;
+}
+
+sub print_help {
+    print <<"EOS";
+Usage: $0 [--note <string>] NAME DB_ID
+
+Create a new database template from an existing database.
+EOS
+    exit;
+}
+

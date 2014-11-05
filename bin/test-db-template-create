@@ -1,0 +1,76 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use TestDbServer::CmdLine qw(get_user_agent url_for assert_success);
+use LWP;
+use HTTP::Request::Common qw(POST);
+use Getopt::Long;
+use JSON qw(decode_json);
+
+my $opts = {};
+GetOptions($opts, 'note=s', 'short-help', 'help');
+
+print_short_help() if ($opts->{'short-help'});
+print_help() if ($opts->{help});
+
+my ($name, $db_name) = @ARGV;
+
+# validate name
+# validate db_name
+
+my $db_id = db_name_to_id($db_name);
+
+my $ua = get_user_agent();
+
+my @payload = map { $_ => $opts->{$_} }
+              grep { exists $opts->{$_} }
+              qw( note );
+push @payload,
+    'name' => $name,
+    'based_on' => $db_id;
+
+my $req = POST(url_for('templates'),
+                Content_Type => 'form-data',
+                Content => \@payload);
+my $rsp = $ua->request($req);
+assert_success $rsp;
+
+printf "CREATED %s\n", $name;
+exit 0;
+
+sub db_name_to_id {
+    my $db_name = shift;
+
+    my $ua = get_user_agent();
+    my $req = HTTP::Request->new(GET => url_for('databases', [ name => $db_name ]));
+    my $rsp = $ua->request($req);
+    assert_success $rsp;
+
+    my $ids = decode_json($rsp->content);
+    if (! @$ids) {
+        print STDERR "There is no database with that name\n";
+        exit 2;
+    } elsif (@$ids > 1) {
+        print STDERR "There are multiple matches for that name?! (found ",scalar(@$ids),"\n";
+        exit 3;
+    }
+
+    return $ids->[0];
+}
+
+sub print_short_help {
+    print "create a new database template from an existing database\n";
+    exit;
+}
+
+sub print_help {
+    print <<"EOS";
+Usage: $0 [--note <string>] NAME DB_ID
+
+Create a new database template from an existing database.
+EOS
+    exit;
+}
+

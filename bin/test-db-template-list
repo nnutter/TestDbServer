@@ -15,7 +15,8 @@ foreach_database_or_template('templates', \&print_template_info);
 sub print_template_info {
     my $template = shift;
 
-    print join("\t", @$template{'name','note'}),"\n";
+    my $note = $template{note} || '';
+    print join("\t", $template{name}, $note),"\n";
 }
 
 sub print_short_help {

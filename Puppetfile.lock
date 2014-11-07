@@ -1,0 +1,57 @@
+FORGE
+  remote: https://forge.puppetlabs.com
+  specs:
+    nnutter-perlbrew (0.1.4)
+      puppetlabs-stdlib (>= 1.0.0)
+    puppetlabs-apt (1.7.0)
+      puppetlabs-stdlib (>= 2.2.1)
+    puppetlabs-concat (1.1.2)
+      puppetlabs-stdlib (< 5.0.0, >= 3.2.0)
+    puppetlabs-firewall (1.2.0)
+    puppetlabs-stdlib (4.3.2)
+
+GIT
+  remote: https://github.com/nnutter/nnutter-testdb.git
+  ref: 0.1.5
+  sha: a5c14efebbbd7cdfa3b0aa9a007739f72dff0e61
+  specs:
+    nnutter-testdb (0.1.5)
+      nnutter-perlbrew (>= 0)
+      puppetlabs-apache (>= 0)
+      puppetlabs-postgresql (>= 0)
+      puppetlabs-stdlib (>= 1.0.0)
+      puppetlabs-vcsrepo (>= 0)
+
+GIT
+  remote: https://github.com/puppetlabs/puppetlabs-apache.git
+  ref: 1.1.1
+  sha: 212e09d383c7382aa269e8c00e5c20c1c3808b2d
+  specs:
+    puppetlabs-apache (1.1.1)
+      puppetlabs-concat (>= 1.0.0)
+      puppetlabs-stdlib (>= 2.4.0)
+
+GIT
+  remote: https://github.com/puppetlabs/puppetlabs-postgresql.git
+  ref: 3.4.2
+  sha: 1da829b7f28d412ab0977e380b905203413d861b
+  specs:
+    puppetlabs-postgresql (3.4.2)
+      puppetlabs-apt (< 2.0.0, >= 1.1.0)
+      puppetlabs-concat (< 2.0.0, >= 1.0.0)
+      puppetlabs-firewall (>= 0.0.4)
+      puppetlabs-stdlib (< 5.0.0, >= 3.2.0)
+
+GIT
+  remote: https://github.com/puppetlabs/puppetlabs-vcsrepo.git
+  ref: 1.0.2
+  sha: 35c44ceba47803a68aadd30c4813445233c623da
+  specs:
+    puppetlabs-vcsrepo (1.0.2)
+
+DEPENDENCIES
+  nnutter-testdb (>= 0)
+  puppetlabs-apache (>= 0)
+  puppetlabs-postgresql (>= 0)
+  puppetlabs-vcsrepo (>= 0)
+

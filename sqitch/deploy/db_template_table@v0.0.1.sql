@@ -2,6 +2,6 @@
 
 BEGIN;
 
-DROP TABLE db_template IF EXISTS;
+DROP TABLE IF EXISTS db_template;
 
 COMMIT;
